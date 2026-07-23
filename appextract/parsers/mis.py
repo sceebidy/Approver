@@ -5,13 +5,13 @@ def parse(text: str) -> dict:
     data = {"doc_type": "MIS"}
 
     m = re.search(r"MIS\s*:\s*(\d+)", text)
-    data["mis_no"] = m.group(1) if m else None
+    data["nomor_mis"] = m.group(1) if m else None
 
     m = re.search(r"Required\s*:\s*(\S+)", text)
     data["required_for"] = m.group(1) if m else None
 
     m = re.search(r"Date\.\s*:\s*(\d{2}/\d{2}/\d{4})(\d{2}:\d{2}:\d{2})", text)
-    data["date"] = m.group(1) if m else None
+    data["tgl_mis"] = m.group(1) if m else None
     data["time"] = m.group(2) if m else None
 
     m = re.search(r"Section\s*:\s*(\S+)", text)
@@ -33,9 +33,9 @@ def parse(text: str) -> dict:
                     desc = f"{desc}{nxt}"
             items.append({
                 "no": int(m.group(1)),
-                "description": desc.strip(),
-                "unit": m.group(3),
-                "qty_raw": m.group(4),
+                "desc": desc.strip(),
+                "satuan": m.group(3),
+                "qty": m.group(4),
             })
     data["items"] = items
 

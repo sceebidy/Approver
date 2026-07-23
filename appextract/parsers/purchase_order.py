@@ -24,7 +24,7 @@ def parse(text: str) -> dict:
     data["tgl_berlaku"] = m.group(1) if m else None
 
     m = re.search(r"PONo:\s*(\d+)", text)
-    data["po_no"] = m.group(1) if m else None
+    data["nomor_po"] = m.group(1) if m else None
 
     m = re.search(r"NumberMR:\s*(\d+)", text)
     data["number_mr"] = m.group(1) if m else None
@@ -58,10 +58,10 @@ def parse(text: str) -> dict:
                     desc = f"{desc} {nxt}"
             items.append({
                 "no": int(m.group(1)),
-                "description": desc.strip(),
-                "unit": m.group(3),
+                "deskripsi": desc.strip(),
+                "satuan": m.group(3),
                 "qty": int(m.group(4)),
-                "unit_price": clean_num(m.group(5)),
+                "harga_satuan": clean_num(m.group(5)),
                 "amount": clean_num(m.group(6)),
             })
     data["items"] = items

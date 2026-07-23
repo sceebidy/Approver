@@ -6,7 +6,7 @@ def parse(text: str) -> dict:
     data = {"doc_type": "PURCHASE_ORDER_V2"}
 
     m = re.search(r"NoPO\s*:\s*(\d+)", text)
-    data["no_po"] = m.group(1) if m else None
+    data["nomor_po"] = m.group(1) if m else None
 
     m = re.search(r"DocumentDate\s*:\s*([\d/]+)", text)
     data["document_date"] = m.group(1) if m else None
@@ -55,7 +55,7 @@ def parse(text: str) -> dict:
                 "deskripsi": desc,
                 "qty": int(m.group(3)),
                 "satuan": m.group(4),
-                "harga_per_unit": clean_num(m.group(5)),
+                "harga_satuan": clean_num(m.group(5)),
                 "jumlah": clean_num(m.group(6)),
             })
             i = next_i
@@ -68,7 +68,7 @@ def parse(text: str) -> dict:
                 "deskripsi": desc,
                 "qty": int(m2.group(2)),
                 "satuan": m2.group(3),
-                "harga_per_unit": clean_num(m2.group(4)),
+                "harga_satuan": clean_num(m2.group(4)),
             })
             i = next_i
             continue

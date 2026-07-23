@@ -6,7 +6,7 @@ def parse(text: str) -> dict:
     data = {"doc_type": "PPAB"}
 
     m = re.search(r"Nomor:\s*(\d+)", text)
-    data["nomor"] = m.group(1) if m else None
+    data["nomor_ppab"] = m.group(1) if m else None
 
     m = re.search(r"Kebun/Unit:\s*:\s*(\S+)", text)
     data["kebun_unit"] = m.group(1) if m else None
@@ -25,9 +25,9 @@ def parse(text: str) -> dict:
     for m in item_pattern.finditer(text):
         item = {
             "no": int(m.group(1)),
-            "uraian": m.group(2).strip(),
+            "deskripsi": m.group(2).strip(),
             "satuan": m.group(3),
-            "jumlah_fisik": int(m.group(4)),
+            "qty": int(m.group(4)),
             "harga_satuan": clean_num(m.group(5)),
             "jumlah": clean_num(m.group(6)),
         }
