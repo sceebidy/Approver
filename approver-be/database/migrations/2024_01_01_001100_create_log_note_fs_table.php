@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateLongNoteFsTable extends Migration
+class CreateLogNoteFsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class CreateLongNoteFsTable extends Migration
      */
     public function up()
     {
-        Schema::create('long_note_fs', function (Blueprint $table) {
+        Schema::create('log_note_fs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('fs_id')->constrained('fund_settlement')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users');
@@ -29,6 +29,6 @@ class CreateLongNoteFsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('long_note_fs');
+        Schema::dropIfExists('log_note_fs');
     }
 }

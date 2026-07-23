@@ -41,9 +41,9 @@ class FundSettlement extends Model
         return $this->hasMany(FsItemLine::class, 'fs_id');
     }
 
-    public function longNotes()
+    public function logNotes()
     {
-        return $this->hasMany(LongNoteFs::class, 'fs_id');
+        return $this->hasMany(LogNoteFs::class, 'fs_id');
     }
 
     public function approvers()

@@ -5,21 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class LongNoteFr extends Model
+class LogNoteFs extends Model
 {
     use HasFactory;
 
-    protected $table = 'long_note_fr';
+    protected $table = 'log_note_fs';
 
     protected $fillable = [
-        'fr_id',
+        'fs_id',
         'user_id',
         'remark'
     ];
 
-    public function fr()
+    public function fundSettlement()
     {
-        return $this->belongsTo(Fr::class, 'fr_id');
+        return $this->belongsTo(FundSettlement::class, 'fs_id');
     }
 
     public function user()
