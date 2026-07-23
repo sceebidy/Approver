@@ -46,9 +46,9 @@ class Fr extends Model
         return $this->hasMany(FrApprover::class, 'fr_id');
     }
 
-    public function longNotes()
+    public function logNotes()
     {
-        return $this->hasMany(LongNoteFr::class, 'fr_id');
+        return $this->hasMany(LogNoteFr::class, 'fr_id');
     }
 
     public function attachments()
