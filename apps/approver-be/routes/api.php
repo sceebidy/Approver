@@ -15,12 +15,26 @@ use Illuminate\Support\Facades\Route;
 */
 
 use App\Http\Controllers\DocumentController;
-
 use App\Http\Controllers\ExtractionController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PortalController;
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
+// Public Routes
+Route::get('/auth/csrf', [AuthController::class, 'csrf']);
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+// Protected Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    
+    // Portal API proxy routes
+    Route::get('/portal/employees', [PortalController::class, 'employees']);
+    Route::get('/portal/grades', [PortalController::class, 'grades']);
+    Route::get('/portal/organization-units', [PortalController::class, 'organizationUnits']);
+    Route::get('/portal/placements', [PortalController::class, 'placements']);
+
+    // Existing routes (might need auth later, but keep as is for now)
+    Route::post('/process-document', [DocumentController::class, 'process']);
+    Route::post('/extract-document', [ExtractionController::class, 'extract']);
 });
-
-Route::post('/process-document', [DocumentController::class, 'process']);
-Route::post('/extract-document', [ExtractionController::class, 'extract']);
