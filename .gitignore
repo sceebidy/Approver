@@ -1,3 +1,11 @@
 __pycache__/
 *.pyc
 apps/Intes*.json
+
+# Ignore leftover manual testing artifacts in project root
+/*.pdf
+response.json
+*_error.html
+temp*.pdf
+response-*.json
+*.log

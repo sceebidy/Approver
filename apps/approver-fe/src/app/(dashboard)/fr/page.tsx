@@ -1,8 +1,6 @@
 import DocumentListPage from "@/components/DocumentListPage";
 
-const rows = [
-  { id: "FR-2026-0089", deskripsi: "Fund Request - Perbaikan mesin press", pemohon: "Dedi Kurniawan", tanggal: "23 Jul 2026", status: "pending", total: "Rp 22.300.000" },
-];
+const rows: any[] = [];
 
 export default function FrListPage() {
   return (

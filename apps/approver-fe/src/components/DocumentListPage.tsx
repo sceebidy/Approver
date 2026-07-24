@@ -89,43 +89,51 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
           </div>
         </div>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-[#9CA3AF] border-b border-[#E3E6EA]">
-              {columns.map((c) => (
-                <th key={c.key} className={`px-4 py-2.5 font-medium ${c.align === "right" ? "text-right" : ""}`}>
-                  {c.label}
-                </th>
-              ))}
-              <th className="px-4 py-2.5 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E3E6EA]">
-            {filtered.map((r) => (
-              <tr key={r.id} className="hover:bg-[#F8F9FB] cursor-pointer">
-                {columns.map((c) => (
-                  <td
-                    key={c.key}
-                    className={`px-4 py-3 ${c.align === "right" ? "text-right" : ""} ${
-                      c.mono ? "font-mono text-[12.5px]" : ""
-                    } ${c.key === "id" ? "text-[#4B5563] text-[12px]" : "text-[#111827]"}`}
-                  >
-                    {r[c.key]}
-                  </td>
-                ))}
-                <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E3E6EA] text-[12px] text-[#9CA3AF]">
-          <span>Menampilkan {filtered.length} dari {rows.length} {title}</span>
-          <div className="flex items-center gap-1">
-            <button className="px-2.5 py-1 rounded-md border border-[#E3E6EA] hover:bg-[#F1F3F6]">Sebelumnya</button>
-            <button className="px-2.5 py-1 rounded-md border border-[#E3E6EA] hover:bg-[#F1F3F6]">Selanjutnya</button>
+        {rows.length === 0 ? (
+          <div className="px-6 py-12 text-center text-sm text-[#6B7280]">
+            Belum ada data.
           </div>
-        </div>
+        ) : (
+          <>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-[#9CA3AF] border-b border-[#E3E6EA]">
+                  {columns.map((c) => (
+                    <th key={c.key} className={`px-4 py-2.5 font-medium ${c.align === "right" ? "text-right" : ""}`}>
+                      {c.label}
+                    </th>
+                  ))}
+                  <th className="px-4 py-2.5 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E3E6EA]">
+                {filtered.map((r) => (
+                  <tr key={r.id} className="hover:bg-[#F8F9FB] cursor-pointer">
+                    {columns.map((c) => (
+                      <td
+                        key={c.key}
+                        className={`px-4 py-3 ${c.align === "right" ? "text-right" : ""} ${
+                          c.mono ? "font-mono text-[12.5px]" : ""
+                        } ${c.key === "id" ? "text-[#4B5563] text-[12px]" : "text-[#111827]"}`}
+                      >
+                        {r[c.key]}
+                      </td>
+                    ))}
+                    <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E3E6EA] text-[12px] text-[#9CA3AF]">
+              <span>Menampilkan {filtered.length} dari {rows.length} {title}</span>
+              <div className="flex items-center gap-1">
+                <button className="px-2.5 py-1 rounded-md border border-[#E3E6EA] hover:bg-[#F1F3F6]">Sebelumnya</button>
+                <button className="px-2.5 py-1 rounded-md border border-[#E3E6EA] hover:bg-[#F1F3F6]">Selanjutnya</button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

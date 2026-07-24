@@ -5,13 +5,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import UploadModal from "@/components/UploadModal";
 
-const rows = [
-  { id: "PPAB-2026-0114", deskripsi: "Pengadaan pupuk NPK - Blok C", pemohon: "Dedi Kurniawan", tanggal: "21 Jul 2026", status: "pending", total: "Rp 84.500.000" },
-  { id: "PPAB-2026-0113", deskripsi: "Perbaikan pompa irigasi Blok B", pemohon: "Siti Aminah", tanggal: "20 Jul 2026", status: "approved", total: "Rp 12.750.000" },
-  { id: "PPAB-2026-0112", deskripsi: "Pengadaan alat panen manual", pemohon: "Rian A.", tanggal: "19 Jul 2026", status: "rejected", total: "Rp 5.200.000" },
-  { id: "PPAB-2026-0111", deskripsi: "Bahan bakar unit operasional", pemohon: "Dedi Kurniawan", tanggal: "18 Jul 2026", status: "draft", total: "Rp 31.000.000" },
-  { id: "PPAB-2026-0110", deskripsi: "Pengadaan pupuk urea - Blok A", pemohon: "Siti Aminah", tanggal: "17 Jul 2026", status: "approved", total: "Rp 96.400.000" },
-];
+const rows: any[] = [];
 
 export default function PpabListPage() {
   const [open, setOpen] = useState(false);
