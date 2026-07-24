@@ -5,10 +5,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import UploadModal from "@/components/UploadModal";
 
-const rows = [
-  { id: "PO-2026-0201", deskripsi: "PO Suku cadang traktor", vendor: "Sinar Jaya", tanggal: "22 Jul 2026", status: "pending", total: "Rp 156.000.000" },
-  { id: "PO-2026-0200", deskripsi: "PO Ban unit operasional", vendor: "CV Mitra Roda", tanggal: "20 Jul 2026", status: "approved", total: "Rp 45.300.000" },
-];
+const rows: any[] = [];
 
 export default function PoListPage() {
   const [open, setOpen] = useState(false);

@@ -5,9 +5,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import UploadModal from "@/components/UploadModal";
 
-const rows = [
-  { id: "MIS-2026-0067", deskripsi: "Penerimaan barang - Blok A gudang 2", lokasi: "Gudang 2", tanggal: "22 Jul 2026", status: "approved", total: "Rp 41.200.000" },
-];
+const rows: any[] = [];
 
 export default function MisListPage() {
   const [open, setOpen] = useState(false);

@@ -1,8 +1,6 @@
 import DocumentListPage from "@/components/DocumentListPage";
 
-const rows = [
-  { id: "FS-2026-0033", deskripsi: "Fund Settlement - Perjalanan dinas Q3", pemohon: "Siti Aminah", tanggal: "22 Jul 2026", status: "approved", total: "Rp 6.750.000" },
-];
+const rows: any[] = [];
 
 export default function FsListPage() {
   return (
