@@ -1,2 +1,10 @@
 __pycache__/
 *.pyc
+
+# Ignore leftover manual testing artifacts in project root
+/*.pdf
+response.json
+*_error.html
+temp*.pdf
+response-*.json
+*.log
