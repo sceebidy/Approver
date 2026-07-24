@@ -53,8 +53,8 @@ def parse(text: str) -> dict:
 
     data["approval_roles"] = {
         "pelaksanaan_disetujui_oleh": "Manajer/Kabag IT",
-        "diperiksa_oleh": "Kepala Bagian Akuntansi dan Keuangan",
-        "anggaran_disetujui_oleh": "SEVP Operation/SEVP Business Support, SEVP Business Support/Direktur",
+        "diperiksa_oleh": "Kepala Bagian Akuntansi dan Keuangan, SEVP Operation/SEVP Business Support",
+        "anggaran_disetujui_oleh": "SEVP Business Support / Direktur",
     }
 
     return data
