@@ -13,9 +13,9 @@ const config: Config = {
         foreground: "var(--foreground)",
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)"],
-        display: ["var(--font-display)"],
-        mono: ["var(--font-plex-mono)"],
+        sans: ["var(--font-sans)", "Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial"],
+        display: ["var(--font-sans)"],
+        mono: ["var(--font-plex-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Roboto Mono", "monospace"],
       },
     },
   },
