@@ -21,26 +21,10 @@ def _extract_po_approval(text: str, vendor_nama: str = "Pihak Supplier / Vendor"
         jabatan_line = lines[idx + 2] if idx + 2 < len(lines) else ""
         
         return {
-            "raw_baris_nama": names_line,
-            "raw_baris_jabatan": jabatan_line,
-            "aligned": {
-                "accepted_by": {
-                    "nama": vendor_nama,
-                    "jabatan": ""
-                },
-                "prepared_by": {
-                    "nama": "TOMY INRI AKBAR LINGGA",
-                    "jabatan": "ASISTEN IT"
-                },
-                "checked_by": {
-                    "nama": "OKA ARITONANG",
-                    "jabatan": "KASUBAG SISTEM & IT"
-                },
-                "approved_by": {
-                    "nama": "FERDIANSYAH",
-                    "jabatan": "KABAG SDM & SISTEM"
-                }
-            }
+            "accepted_by": vendor_nama,
+            "prepared_by": "TOMY INRI AKBAR LINGGA (ASISTEN IT)",
+            "checked_by": "OKA ARITONANG (KASUBAG SISTEM & IT)",
+            "approved_by": "FERDIANSYAH (KABAG SDM & SISTEM)"
         }
     except Exception:
         return {}
@@ -108,6 +92,6 @@ def parse(text: str) -> dict:
     data["grand_total"] = clean_num(m.group(1)) if m else None
 
     vendor_nama = data.get("vendor", {}).get("nama") or "Pihak Supplier / Vendor"
-    data["approval"] = _extract_po_approval(text, vendor_nama)
+    data["approval_roles"] = _extract_po_approval(text, vendor_nama)
 
     return data
