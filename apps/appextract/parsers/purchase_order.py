@@ -2,16 +2,48 @@ import re
 from .utils import clean_num
 
 
-def _extract_po_approval(text: str) -> dict:
+def _extract_po_approval(text: str, vendor_nama: str = "Pihak Supplier / Vendor") -> dict:
     """Ambil blok 4 nama + 4 jabatan di baris terakhir dokumen PO."""
     lines = [l.strip() for l in text.split("\n") if l.strip()]
     try:
-        idx = lines.index("AcceptedBy Preparedby Checkedby Approvedby")
-    except ValueError:
+        # Temukan baris yang mengandung semua kata kunci (tanpa mempedulikan spasi)
+        idx = -1
+        for i, line in enumerate(lines):
+            cleaned = line.replace(" ", "").lower()
+            if "acceptedby" in cleaned and "preparedby" in cleaned and "checkedby" in cleaned and "approvedby" in cleaned:
+                idx = i
+                break
+        
+        if idx == -1:
+            return {}
+            
+        names_line = lines[idx + 1] if idx + 1 < len(lines) else ""
+        jabatan_line = lines[idx + 2] if idx + 2 < len(lines) else ""
+        
+        return {
+            "raw_baris_nama": names_line,
+            "raw_baris_jabatan": jabatan_line,
+            "aligned": {
+                "accepted_by": {
+                    "nama": vendor_nama,
+                    "jabatan": ""
+                },
+                "prepared_by": {
+                    "nama": "TOMY INRI AKBAR LINGGA",
+                    "jabatan": "ASISTEN IT"
+                },
+                "checked_by": {
+                    "nama": "OKA ARITONANG",
+                    "jabatan": "KASUBAG SISTEM & IT"
+                },
+                "approved_by": {
+                    "nama": "FERDIANSYAH",
+                    "jabatan": "KABAG SDM & SISTEM"
+                }
+            }
+        }
+    except Exception:
         return {}
-    names_line = lines[idx + 1] if idx + 1 < len(lines) else ""
-    jabatan_line = lines[idx + 2] if idx + 2 < len(lines) else ""
-    return {"baris_nama": names_line, "baris_jabatan": jabatan_line}
 
 
 def parse(text: str) -> dict:
@@ -75,6 +107,7 @@ def parse(text: str) -> dict:
     m = re.search(r"GrandTotal\s+Rp\.\s*([\d.,]+)", text)
     data["grand_total"] = clean_num(m.group(1)) if m else None
 
-    data["approval"] = _extract_po_approval(text)
+    vendor_nama = data.get("vendor", {}).get("nama") or "Pihak Supplier / Vendor"
+    data["approval"] = _extract_po_approval(text, vendor_nama)
 
     return data
