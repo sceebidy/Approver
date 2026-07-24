@@ -11,8 +11,13 @@ export default function SSOVerifyPage() {
 
   useEffect(() => {
     const verifyToken = async () => {
-      if (!token) {
-        setError('Token tidak ditemukan di URL.');
+      // Sometimes useSearchParams can be empty on first mount during static generation,
+      // fallback to native window.location.search to guarantee we get it on the client
+      const urlParams = new URLSearchParams(window.location.search);
+      const actualToken = token || urlParams.get('token');
+
+      if (!actualToken) {
+        setError(`Token tidak ditemukan di URL. (URL: ${window.location.href})`);
         return;
       }
 
@@ -24,7 +29,7 @@ export default function SSOVerifyPage() {
         const csrfRes = await fetch(`${apiUrl}/auth/csrf`, {
           method: 'GET',
           headers: { 'Accept': 'application/json' },
-          credentials: 'omit' 
+          credentials: 'include' 
         });
         
         let csrfToken = '';
@@ -43,7 +48,7 @@ export default function SSOVerifyPage() {
           },
           credentials: 'include', // Ensure browser saves the HttpOnly session cookie
           body: JSON.stringify({
-            ssoToken: token,
+            ssoToken: actualToken,
             appId: appId,
           }),
         });

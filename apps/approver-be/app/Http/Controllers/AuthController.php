@@ -24,7 +24,7 @@ class AuthController extends Controller
         
         try {
             // Call Portal SSO Verify
-            $response = Http::post("{$portalUrl}/api/sso/verify", [
+            $response = Http::withoutVerifying()->post("{$portalUrl}/api/sso/verify", [
                 'token'  => $request->ssoToken,
                 'app_id' => $request->appId,
             ]);
@@ -62,7 +62,7 @@ class AuthController extends Controller
                     'unit_nama' => $employee['unit']['nama'] ?? null,
                     'foto_profil' => $employee['fotoProfil'] ?? null,
                     'penempatan_nama' => $employee['penempatanArea']['nama'] ?? null,
-                    'password' => bcrypt(str_random(16)), // Fallback password
+                    'password' => bcrypt(\Illuminate\Support\Str::random(16)), // Fallback password
                 ]
             );
 

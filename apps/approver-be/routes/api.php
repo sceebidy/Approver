@@ -34,7 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/portal/organization-units', [PortalController::class, 'organizationUnits']);
     Route::get('/portal/placements', [PortalController::class, 'placements']);
 
-    // Existing routes (might need auth later, but keep as is for now)
-    Route::post('/process-document', [DocumentController::class, 'process']);
-    Route::post('/extract-document', [ExtractionController::class, 'extract']);
 });
+
+// Existing routes (might need auth later, but keep as is for now)
+Route::post('/process-document', [DocumentController::class, 'process']);
+Route::post('/extract-document', [ExtractionController::class, 'extract']);

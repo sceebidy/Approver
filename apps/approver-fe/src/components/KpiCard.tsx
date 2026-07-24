@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react";
+
 export default function KpiCard({
   label,
   value,
@@ -6,7 +8,7 @@ export default function KpiCard({
 }: {
   label: string;
   value: number;
-  icon: any;
+  icon: LucideIcon;
   tone?: "accent" | "ink";
 }) {
   const isAccent = tone === "accent";
