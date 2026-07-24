@@ -77,13 +77,23 @@ export default function Sidebar() {
         <NavItem icon={Wallet} label="Fund Settlement" href="/fs" />
       </nav>
       <div className="p-2.5 border-t border-[#E3E6EA]">
-        <div className="flex items-center gap-2 px-2 py-2 rounded-md">
-          <div className="w-7 h-7 rounded-full bg-[#E3E6EA] text-[#4B5563] flex items-center justify-center text-[11px] font-medium">RA</div>
-          <div className="min-w-0">
-            <div className="text-[12.5px] font-medium truncate text-[#111827]">Rian A.</div>
-            <div className="text-[11px] text-[#9CA3AF] truncate">Estate Finance</div>
+        <Link href="/profile" className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-[#F1F3F6] transition-colors cursor-pointer">
+          {user?.foto_profil ? (
+            <img src={user.foto_profil} alt={user.name || "User"} className="w-8 h-8 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[#1F3A5F] text-white flex items-center justify-center text-[12px] font-medium shrink-0">
+              {getInitials(user?.name || "U")}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="text-[12.5px] font-medium truncate text-[#111827]">
+              {user?.name || "Memuat..."}
+            </div>
+            <div className="text-[11px] text-[#9CA3AF] truncate">
+              {user ? (user?.role || user?.unit_nama || "User") : "Tunggu sebentar"}
+            </div>
           </div>
-        </div>
+        </Link>
       </div>
 
     </aside>
