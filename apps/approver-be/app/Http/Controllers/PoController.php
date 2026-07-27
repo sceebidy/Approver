@@ -10,11 +10,19 @@ class PoController extends Controller
 {
     public function index()
     {
-        $userId = auth()->id();
-        $items = \App\Models\Po::with(['user:id,name', 'approverLines'])
-            ->latest()
-            ->get()
-            ->map(fn($p) => [
+        $user = auth()->user();
+        $query = \App\Models\Po::with(['user:id,name', 'approverLines'])->latest();
+
+        if ($user->role !== 'super_admin') {
+            $query->where(function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhereHas('approverLines', function($q2) use ($user) {
+                      $q2->where('approver_id', $user->id);
+                  });
+            });
+        }
+
+        $items = $query->get()->map(fn($p) => [
                 'id'          => $p->id,
                 'nomor_po'    => $p->nomor_po,
                 'nomor_ppab'  => $p->nomor_ppab,
@@ -24,7 +32,7 @@ class PoController extends Controller
                 'created_at'  => $p->created_at,
                 'status'      => 'pending',
                 'can_cancel'  => !$p->approverLines->contains('status', 'approved'),
-                'request_type'=> $p->user_id === $userId ? 'Pengajuan Saya' : ($p->approverLines->contains('approver_id', $userId) ? 'Perlu Persetujuan' : 'Lainnya'),
+                'request_type'=> $p->user_id === $user->id ? 'Pengajuan Saya' : ($p->approverLines->contains('approver_id', $user->id) ? 'Perlu Persetujuan' : 'Lainnya'),
             ]);
 
         return response()->json(['success' => true, 'data' => $items]);
@@ -114,15 +122,15 @@ class PoController extends Controller
     {
         $po = Po::with(['user:id,name', 'itemLines', 'subtotals', 'approverLines.approver:id,name'])->findOrFail($id);
         
-        $userId = auth()->id();
-        $isOwner = $po->user_id === $userId;
-        $isApprover = $po->approverLines->contains('approver_id', $userId);
+        $user = auth()->user();
+        $isOwner = $po->user_id === $user->id;
+        $isApprover = $po->approverLines->contains('approver_id', $user->id);
         
-        if (!$isOwner && !$isApprover) {
+        if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
         }
 
-        $po->request_type = $isOwner ? 'Pengajuan Saya' : 'Perlu Persetujuan';
+        $po->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Perlu Persetujuan' : 'Lainnya');
         $po->can_cancel = !$po->approverLines->contains('status', 'approved');
 
         return response()->json([

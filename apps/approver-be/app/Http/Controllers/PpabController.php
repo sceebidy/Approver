@@ -11,11 +11,19 @@ class PpabController extends Controller
 {
     public function index()
     {
-        $userId = auth()->id();
-        $items = \App\Models\Ppab::with(['user:id,name', 'approverLines'])
-            ->latest()
-            ->get()
-            ->map(fn($p) => [
+        $user = auth()->user();
+        $query = \App\Models\Ppab::with(['user:id,name', 'approverLines'])->latest();
+
+        if ($user->role !== 'super_admin') {
+            $query->where(function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhereHas('approverLines', function($q2) use ($user) {
+                      $q2->where('approver_id', $user->id);
+                  });
+            });
+        }
+
+        $items = $query->get()->map(fn($p) => [
                 'id'          => $p->id,
                 'nomor_ppab'  => $p->nomor_ppab,
                 'deskripsi'   => $p->deskripsi,
@@ -24,7 +32,7 @@ class PpabController extends Controller
                 'created_at'  => $p->created_at,
                 'status'      => 'pending',
                 'can_cancel'  => !$p->approverLines->contains('status', 'approved'),
-                'request_type'=> $p->user_id === $userId ? 'Pengajuan Saya' : ($p->approverLines->contains('approver_id', $userId) ? 'Perlu Persetujuan' : 'Lainnya'),
+                'request_type'=> $p->user_id === $user->id ? 'Pengajuan Saya' : ($p->approverLines->contains('approver_id', $user->id) ? 'Perlu Persetujuan' : 'Lainnya'),
             ]);
 
         return response()->json(['success' => true, 'data' => $items]);
@@ -120,15 +128,15 @@ class PpabController extends Controller
     {
         $ppab = Ppab::with(['user:id,name', 'items.lineSpecs', 'subtotals', 'approverLines.approver:id,name'])->findOrFail($id);
         
-        $userId = auth()->id();
-        $isOwner = $ppab->user_id === $userId;
-        $isApprover = $ppab->approverLines->contains('approver_id', $userId);
+        $user = auth()->user();
+        $isOwner = $ppab->user_id === $user->id;
+        $isApprover = $ppab->approverLines->contains('approver_id', $user->id);
         
-        if (!$isOwner && !$isApprover) {
+        if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
         }
 
-        $ppab->request_type = $isOwner ? 'Pengajuan Saya' : 'Perlu Persetujuan';
+        $ppab->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Perlu Persetujuan' : 'Lainnya');
         $ppab->can_cancel = !$ppab->approverLines->contains('status', 'approved');
 
         return response()->json([

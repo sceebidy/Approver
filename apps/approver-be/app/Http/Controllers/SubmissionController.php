@@ -364,6 +364,13 @@ class SubmissionController extends Controller
 
     private function getOrCreateUser($approverData)
     {
+        if (!empty($approverData['employee_id'])) {
+            $user = User::where('employee_id', $approverData['employee_id'])->first();
+            if ($user) {
+                return $user;
+            }
+        }
+
         // ApproverData from SSO might contain email, name, employee_id, role
         $email = $approverData['email'] ?? ($approverData['employee_id'] . '@inl.co.id');
         
