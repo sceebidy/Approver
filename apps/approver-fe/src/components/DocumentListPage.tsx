@@ -45,11 +45,39 @@ const tabs = [
 
 export default function DocumentListPage({ title, subtitle, createLabel, createHref, createNode, columns, rows, loading, error, onDelete, onRowClick }: Props) {
   const [activeTab, setActiveTab] = useState("all");
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
   const [deletingRow, setDeletingRow] = useState<DocRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const filtered = activeTab === "all" ? rows : rows.filter((r) => r.status === activeTab);
+  const filtered = rows.filter((r) => {
+    if (activeTab !== "all" && r.status !== activeTab) return false;
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const matchesSearch = Object.values(r).some(
+        (val) => val && String(val).toLowerCase().includes(q)
+      );
+      if (!matchesSearch) return false;
+    }
+
+    if (dateFilter !== "all" && r.created_at) {
+      const rowDate = new Date(r.created_at);
+      const today = new Date();
+      if (dateFilter === "today") {
+        if (rowDate.toDateString() !== today.toDateString()) return false;
+      } else if (dateFilter === "week") {
+        const weekAgo = new Date();
+        weekAgo.setDate(today.getDate() - 7);
+        if (rowDate < weekAgo) return false;
+      } else if (dateFilter === "month") {
+        if (rowDate.getMonth() !== today.getMonth() || rowDate.getFullYear() !== today.getFullYear()) return false;
+      }
+    }
+
+    return true;
+  });
 
   /** Format nilai sel berdasarkan type kolom */
   function cellValue(row: DocRow, col: DocColumn): string {
@@ -122,13 +150,21 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
               <input
                 placeholder="Cari nomor / deskripsi"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 className="pl-8 pr-3 py-1.5 text-[13px] border border-[#E3E6EA] rounded-md w-56 outline-none focus:border-[#1F3A5F] placeholder:text-[#9CA3AF]"
               />
             </div>
-            <button className="flex items-center gap-1 text-[13px] text-[#4B5563] border border-[#E3E6EA] rounded-md px-3 py-1.5 hover:bg-[#F1F3F6]">
-              Tanggal
-              <ChevronDown size={13} />
-            </button>
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="text-[13px] text-[#4B5563] border border-[#E3E6EA] rounded-md px-2 py-1.5 hover:bg-[#F1F3F6] outline-none cursor-pointer"
+            >
+              <option value="all">Semua Waktu</option>
+              <option value="today">Hari Ini</option>
+              <option value="week">7 Hari Terakhir</option>
+              <option value="month">Bulan Ini</option>
+            </select>
           </div>
         </div>
 

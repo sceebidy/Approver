@@ -38,6 +38,7 @@ interface DocDetail {
   // MIS specific
   nomor_mis?: string;
   tgl_mis?: string;
+  current_user_id?: number;
 }
 
 interface DocumentDetailModalProps {
@@ -86,6 +87,28 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
       setError(err.message || 'Terjadi kesalahan jaringan.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAction = async (action: 'approve' | 'reject') => {
+    if (!data || !data.current_user_id) return;
+    const actualApprovers = data.approverLines || data.approver_lines || [];
+    const pendingLine = actualApprovers.find(l => l.approver_id === data.current_user_id && l.status === 'pending');
+    if (!pendingLine) return;
+
+    if (!confirm(`Apakah Anda yakin ingin me${action === 'approve' ? 'nyetujui' : 'nolak'} dokumen ini?`)) return;
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+      const res = await fetch(`${apiUrl}/submissions/${docType}/${pendingLine.id}/${action}`, {
+        method: "POST",
+        credentials: "include"
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.message || 'Aksi gagal');
+      fetchDetail(); // Refresh data to show updated status
+    } catch (err: any) {
+      alert("Error: " + err.message);
     }
   };
 
@@ -331,7 +354,25 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
         </div>
 
         {/* Footer */}
-        <div className="border-t border-[#E3E6EA] p-4 bg-[#F8F9FB] sm:rounded-b-lg flex justify-end shrink-0">
+        <div className="border-t border-[#E3E6EA] p-4 bg-[#F8F9FB] sm:rounded-b-lg flex items-center justify-between shrink-0">
+          <div>
+            {data && data.current_user_id && actualApprovers.some(l => l.approver_id === data.current_user_id && l.status === 'pending') && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleAction('approve')}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors"
+                >
+                  <CheckCircle2 size={16} /> Setujui
+                </button>
+                <button
+                  onClick={() => handleAction('reject')}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 transition-colors"
+                >
+                  <XCircle size={16} /> Tolak
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-white border border-[#D1D5DB] text-sm font-medium text-slate-700 rounded-md hover:bg-slate-50 transition-colors"

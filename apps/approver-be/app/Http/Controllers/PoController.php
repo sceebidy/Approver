@@ -132,6 +132,7 @@ class PoController extends Controller
 
         $po->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $po->can_cancel = !$po->approverLines->contains('status', 'approved');
+        $po->current_user_id = $user->id;
 
         return response()->json([
             'success' => true,

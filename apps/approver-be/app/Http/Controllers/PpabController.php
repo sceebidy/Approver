@@ -138,6 +138,7 @@ class PpabController extends Controller
 
         $ppab->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $ppab->can_cancel = !$ppab->approverLines->contains('status', 'approved');
+        $ppab->current_user_id = $user->id;
 
         return response()->json([
             'success' => true,

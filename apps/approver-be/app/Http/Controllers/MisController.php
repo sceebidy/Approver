@@ -122,6 +122,7 @@ class MisController extends Controller
 
         $mis->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $mis->can_cancel = !$mis->approverLines->contains('status', 'approved');
+        $mis->current_user_id = $user->id;
 
         return response()->json([
             'success' => true,
