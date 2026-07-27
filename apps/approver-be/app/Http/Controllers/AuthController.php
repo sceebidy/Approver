@@ -47,24 +47,37 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            // Upsert User Cache based on email or portal ID
-            // Assuming Portal returns 'email' and 'employee' object
+            // Upsert User Cache berdasarkan employee_id (jika ada) atau email
             $email = $portalUser['email'];
             $employee = $portalUser['employee'] ?? null;
-            
-            $user = User::updateOrCreate(
-                ['email' => $email],
-                [
-                    'name' => $employee['namaLengkap'] ?? $portalUser['name'] ?? 'Unknown',
-                    'employee_id' => $employee['id'] ?? null,
-                    'role' => $portalUser['role'] ?? null,
-                    'grade_level' => $employee['grade']['level'] ?? null,
-                    'unit_nama' => $employee['unit']['nama'] ?? null,
-                    'foto_profil' => $employee['fotoProfil'] ?? null,
-                    'penempatan_nama' => $employee['penempatanArea']['nama'] ?? null,
-                    'password' => bcrypt(\Illuminate\Support\Str::random(16)), // Fallback password
-                ]
-            );
+            $employeeId = $employee['id'] ?? null;
+
+            // Cari user eksisting berdasarkan employee_id dulu, jika tidak ada baru berdasarkan email
+            $user = null;
+            if ($employeeId) {
+                $user = User::where('employee_id', $employeeId)->first();
+            }
+            if (!$user && $email) {
+                $user = User::where('email', $email)->first();
+            }
+
+            $userData = [
+                'email' => $email,
+                'name' => $employee['namaLengkap'] ?? $portalUser['name'] ?? 'Unknown',
+                'employee_id' => $employeeId,
+                'role' => $portalUser['role'] ?? null,
+                'grade_level' => $employee['grade']['level'] ?? null,
+                'unit_nama' => $employee['unit']['nama'] ?? null,
+                'foto_profil' => $employee['fotoProfil'] ?? null,
+                'penempatan_nama' => $employee['penempatanArea']['nama'] ?? null,
+            ];
+
+            if ($user) {
+                $user->update($userData);
+            } else {
+                $userData['password'] = bcrypt(\Illuminate\Support\Str::random(16));
+                $user = User::create($userData);
+            }
 
             // Session login
             Auth::guard('web')->login($user);
