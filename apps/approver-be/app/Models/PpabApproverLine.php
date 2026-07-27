@@ -14,6 +14,7 @@ class PpabApproverLine extends Model
     protected $fillable = [
         'ppab_id',
         'approver_id',
+        'role',
         'status',
         'timestamp'
     ];

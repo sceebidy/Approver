@@ -46,6 +46,7 @@ class SubmissionController extends Controller
                     $approver = $this->getOrCreateUser($approverData);
                     $ppab->approverLines()->create([
                         'approver_id' => $approver->id,
+                        'role' => $approverData['role'] ?? 'approver',
                         'status' => 'pending'
                     ]);
                 }
@@ -62,6 +63,7 @@ class SubmissionController extends Controller
                     $approver = $this->getOrCreateUser($approverData);
                     $po->approverLines()->create([
                         'approver_id' => $approver->id,
+                        'role' => $approverData['role'] ?? 'approver',
                         'status' => 'pending'
                     ]);
                 }
@@ -77,7 +79,7 @@ class SubmissionController extends Controller
                     $approver = $this->getOrCreateUser($approverData);
                     $mis->approverLines()->create([
                         'approver_id' => $approver->id,
-                        'role' => 'approver', // default role required by DB
+                        'role' => $approverData['role'] ?? 'approver',
                         'status' => 'pending'
                     ]);
                 }

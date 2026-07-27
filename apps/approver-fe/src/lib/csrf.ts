@@ -24,10 +24,10 @@ export function getXsrfToken(): string {
  * Kembalikan nilai token terbaru setelah refresh.
  */
 export async function refreshCsrfCookie(): Promise<string> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '/api';
-  const baseUrl = apiUrl.replace(/\/api\/?$/, '');
-
-  await fetch(`${baseUrl}/sanctum/csrf-cookie`, {
+  // Gunakan path relatif `/sanctum/csrf-cookie` agar melewati Next.js proxy
+  // (bukan fetch langsung ke localhost:8000 yang cross-origin).
+  // Proxy dikonfigurasi di next.config.mjs → /sanctum/* → http://127.0.0.1:8000/sanctum/*
+  await fetch('/sanctum/csrf-cookie', {
     method: 'GET',
     headers: { Accept: 'application/json' },
     credentials: 'include',

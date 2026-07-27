@@ -11,7 +11,7 @@ class MisController extends Controller
 {
     public function index()
     {
-        $items = \App\Models\Mis::with('user:id,name')
+        $items = \App\Models\Mis::with(['user:id,name', 'approverLines'])
             ->latest()
             ->get()
             ->map(fn($m) => [
@@ -21,7 +21,8 @@ class MisController extends Controller
                 'user_id'    => $m->user_id,
                 'user_name'  => $m->user?->name,
                 'created_at' => $m->created_at,
-                'status'     => 'pending',   // MIS belum punya field status
+                'status'     => 'pending',
+                'can_cancel' => !$m->approverLines->contains('status', 'approved'),
             ]);
 
         return response()->json(['success' => true, 'data' => $items]);
@@ -95,6 +96,28 @@ class MisController extends Controller
             'success' => true,
             'data' => $mis,
         ], 201);
+    }
+
+    public function destroy($id)
+    {
+        $mis = Mis::with('approverLines')->findOrFail($id);
+
+        $hasApproved = $mis->approverLines()->where('status', 'approved')->exists();
+
+        if ($hasApproved) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengajuan tidak dapat dihapus karena sudah ada approval yang disetujui.'
+            ], 409);
+        }
+
+        DB::transaction(function () use ($mis) {
+            $mis->approverLines()->delete();
+            $mis->itemLines()->delete();
+            $mis->delete();
+        });
+
+        return response()->json(['success' => true, 'message' => 'Pengajuan MIS berhasil dihapus.']);
     }
 
     private function parseMisDate(string $date)

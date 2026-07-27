@@ -5,8 +5,11 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("approver_session")?.value;
   const isSsoVerifyRoute = request.nextUrl.pathname.startsWith("/sso/verify");
 
+  console.log(`[Middleware] Path: ${request.nextUrl.pathname} | Token present: ${!!token} (${token || 'NONE'})`);
+
   if (!token && !isSsoVerifyRoute) {
     const portalUrl = process.env.NEXT_PUBLIC_PORTAL_LOGIN_URL || "https://portal.inl.co.id";
+    console.log(`[Middleware] No token found on protected route ${request.nextUrl.pathname}. Redirecting to Portal: ${portalUrl}`);
     // Redirect to Portal if no token is found
     return NextResponse.redirect(new URL(portalUrl));
   }

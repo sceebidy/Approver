@@ -5,10 +5,29 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import UploadModal from "@/components/UploadModal";
 import { useDocumentList } from "@/lib/useDocumentList";
+import { refreshCsrfCookie } from "@/lib/csrf";
 
 export default function MisListPage() {
   const [open, setOpen] = useState(false);
   const { rows, loading, error, refresh } = useDocumentList("mis");
+
+  const handleDelete = async (row: any) => {
+    const xsrfToken = await refreshCsrfCookie();
+    const res = await fetch(`/api/mis/${row.id}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        "X-XSRF-TOKEN": xsrfToken,
+      },
+      credentials: "include",
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || `Gagal menghapus MIS (${res.status})`);
+    }
+    refresh();
+  };
 
   return (
     <>
@@ -33,6 +52,7 @@ export default function MisListPage() {
         rows={rows}
         loading={loading}
         error={error}
+        onDelete={handleDelete}
       />
       <UploadModal
         isOpen={open}

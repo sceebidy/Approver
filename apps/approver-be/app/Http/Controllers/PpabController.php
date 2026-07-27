@@ -11,7 +11,7 @@ class PpabController extends Controller
 {
     public function index()
     {
-        $items = \App\Models\Ppab::with('user:id,name')
+        $items = \App\Models\Ppab::with(['user:id,name', 'approverLines'])
             ->latest()
             ->get()
             ->map(fn($p) => [
@@ -22,6 +22,7 @@ class PpabController extends Controller
                 'user_name'   => $p->user?->name,
                 'created_at'  => $p->created_at,
                 'status'      => 'pending',
+                'can_cancel'  => !$p->approverLines->contains('status', 'approved'),
             ]);
 
         return response()->json(['success' => true, 'data' => $items]);
@@ -46,6 +47,7 @@ class PpabController extends Controller
             'subtotals.*.deskripsi' => 'required|string',
             'approver_lines' => 'nullable|array',
             'approver_lines.*.approver_id' => 'required|integer|exists:users,id',
+            'approver_lines.*.role' => 'nullable|string|max:255',
             'approver_lines.*.status' => 'nullable|string|in:pending,approved,rejected',
             'approver_lines.*.timestamp' => 'nullable|date',
         ]);
@@ -96,6 +98,7 @@ class PpabController extends Controller
                 foreach ($data['approver_lines'] as $line) {
                     $ppab->approverLines()->create([
                         'approver_id' => $line['approver_id'],
+                        'role' => $line['role'] ?? 'approver',
                         'status' => $line['status'] ?? 'pending',
                         'timestamp' => $line['timestamp'] ?? null,
                     ]);
@@ -109,5 +112,28 @@ class PpabController extends Controller
             'success' => true,
             'data' => $ppab,
         ], 201);
+    }
+
+    public function destroy($id)
+    {
+        $ppab = Ppab::with('approverLines')->findOrFail($id);
+
+        $hasApproved = $ppab->approverLines()->where('status', 'approved')->exists();
+
+        if ($hasApproved) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengajuan tidak dapat dihapus karena sudah ada approval yang disetujui.'
+            ], 409);
+        }
+
+        DB::transaction(function () use ($ppab) {
+            $ppab->approverLines()->delete();
+            $ppab->items()->delete();
+            $ppab->subtotals()->delete();
+            $ppab->delete();
+        });
+
+        return response()->json(['success' => true, 'message' => 'Pengajuan PPAB berhasil dihapus.']);
     }
 }

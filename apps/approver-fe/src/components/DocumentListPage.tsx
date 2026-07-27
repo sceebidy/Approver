@@ -30,6 +30,8 @@ interface Props {
   rows: DocRow[];
   loading?: boolean;
   error?: string | null;
+  /** Dipanggil ketika user mengonfirmasi pembatalan/penghapusan pengajuan */
+  onDelete?: (row: DocRow) => Promise<void>;
 }
 
 const tabs = [
@@ -39,8 +41,12 @@ const tabs = [
   { key: "rejected", label: "Ditolak" },
 ];
 
-export default function DocumentListPage({ title, subtitle, createLabel, createHref, createNode, columns, rows, loading, error }: Props) {
+export default function DocumentListPage({ title, subtitle, createLabel, createHref, createNode, columns, rows, loading, error, onDelete }: Props) {
   const [activeTab, setActiveTab] = useState("all");
+  const [deletingRow, setDeletingRow] = useState<DocRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const filtered = activeTab === "all" ? rows : rows.filter((r) => r.status === activeTab);
 
   /** Format nilai sel berdasarkan type kolom */
@@ -59,6 +65,20 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
     }
     return String(raw);
   }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingRow || !onDelete) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDelete(deletingRow);
+      setDeletingRow(null);
+    } catch (err: any) {
+      setDeleteError(err.message || 'Gagal membatalkan pengajuan.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <main className="p-6 space-y-4 max-w-6xl">
@@ -136,11 +156,12 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                     </th>
                   ))}
                   <th className="px-4 py-2.5 font-medium">Status</th>
+                  {onDelete && <th className="px-4 py-2.5 font-medium text-right">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E3E6EA]">
                 {filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-[#F8F9FB] cursor-pointer">
+                  <tr key={r.id} className="hover:bg-[#F8F9FB]">
                     {columns.map((c) => (
                       <td
                         key={c.key}
@@ -154,6 +175,28 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                       </td>
                     ))}
                     <td className="px-4 py-3"><StatusBadge status={r.status ?? 'pending'} /></td>
+                    {onDelete && (
+                      <td className="px-4 py-3 text-right">
+                        {r.can_cancel !== false ? (
+                          <button
+                            onClick={() => {
+                              setDeleteError(null);
+                              setDeletingRow(r);
+                            }}
+                            className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition-colors"
+                          >
+                            Batalkan
+                          </button>
+                        ) : (
+                          <span
+                            title="Pengajuan tidak dapat dibatalkan karena sudah ada approval yang disetujui"
+                            className="px-2.5 py-1 text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded cursor-not-allowed select-none"
+                          >
+                            Batalkan
+                          </span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -169,6 +212,46 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
           </>
         )}
       </div>
+
+      {/* Modal Konfirmasi Batal / Hapus */}
+      {deletingRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Konfirmasi Pembatalan</h3>
+            <p className="text-sm text-gray-600">
+              Apakah Anda yakin ingin membatalkan pengajuan <span className="font-semibold text-gray-800">{deletingRow.nomor_ppab || deletingRow.nomor_po || deletingRow.nomor_mis || deletingRow.id}</span>? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            {deleteError && (
+              <div className="p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-md">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                disabled={isDeleting}
+                onClick={() => setDeletingRow(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 border border-gray-300 rounded-md"
+              >
+                Kembali
+              </button>
+              <button
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Membatalkan...
+                  </>
+                ) : (
+                  'Ya, Batalkan Pengajuan'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }   

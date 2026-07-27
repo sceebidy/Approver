@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { refreshCsrfCookie } from '@/lib/csrf';
 
@@ -9,8 +9,15 @@ export default function SSOVerifyPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [error, setError] = useState<string | null>(null);
+  // Guard: cegah double-invoke dari React StrictMode di development
+  const hasVerified = useRef(false);
 
   useEffect(() => {
+    // React StrictMode di dev me-mount komponen dua kali — guard ini memastikan
+    // token SSO (single-use) hanya dipakai sekali
+    if (hasVerified.current) return;
+    hasVerified.current = true;
+
     const verifyToken = async () => {
       // Sometimes useSearchParams can be empty on first mount during static generation,
       // fallback to native window.location.search to guarantee we get it on the client
@@ -45,15 +52,19 @@ export default function SSOVerifyPage() {
         });
 
         const data = await response.json();
+        console.log('[SSO Verify] Response from /api/auth/login:', { status: response.status, ok: response.ok, data });
 
         if (response.ok && data.success) {
-          // Redirect to the main application, session is handled by HttpOnly cookie
-          router.replace('/');
+          console.log('[SSO Verify] Login sukses! Melakukan full page redirect ke dashboard (/)');
+          // Gunakan window.location.href alih-alih router.replace
+          // agar browser melakukan hard refresh dan membawa cookie session baru ke Middleware
+          window.location.href = '/';
         } else {
+          console.error('[SSO Verify] Login gagal:', data.message);
           setError(data.message || 'Gagal memverifikasi token SSO.');
         }
       } catch (err) {
-        console.error('SSO Verification Error:', err);
+        console.error('[SSO Verify] Exception during verification:', err);
         setError('Terjadi kesalahan saat memverifikasi SSO.');
       }
     };

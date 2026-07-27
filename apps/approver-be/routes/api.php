@@ -48,14 +48,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // PPAB
     Route::get('/ppab',  [PpabController::class, 'index']);
     Route::post('/ppab', [PpabController::class, 'store']);
+    Route::delete('/ppab/{id}', [PpabController::class, 'destroy']);
 
     // PO
     Route::get('/po',  [PoController::class, 'index']);
     Route::post('/po', [PoController::class, 'store']);
+    Route::delete('/po/{id}', [PoController::class, 'destroy']);
 
     // MIS
     Route::get('/mis',  [MisController::class, 'index']);
     Route::post('/mis', [MisController::class, 'store']);
+    Route::delete('/mis/{id}', [MisController::class, 'destroy']);
 
     // FR (read-only untuk saat ini)
     Route::get('/fr', [FrController::class, 'index']);

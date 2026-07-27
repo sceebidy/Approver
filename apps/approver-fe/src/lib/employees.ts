@@ -281,57 +281,40 @@ export function formatApproverFieldLabel(key: string): string {
 
 
 export function collectApproversFromData(data: Record<string, unknown>): Record<string, string>[] {
-
   const approvers: Record<string, string>[] = [];
-
   const seen = new Set<string>();
 
-
-
-  const add = (value: unknown) => {
-
+  const add = (value: unknown, roleKey?: string) => {
     const payload = approverPayloadFromSelection(value);
-
     if (!payload) return;
 
-    const key = payload.employee_id ?? payload.employeeId ?? payload.id;
+    const empId = payload.employee_id ?? payload.employeeId ?? payload.id;
+    const role = roleKey ? roleKey.toLowerCase() : (payload.role || "approver");
 
-    if (!key || seen.has(key)) return;
+    // Kunci deduplikasi mengombinasikan empId + role agar 1 user dapat memegang multiple role berbeda
+    const key = `${empId}:${role}`;
+    if (!empId || seen.has(key)) return;
 
     seen.add(key);
-
-    approvers.push(payload);
-
+    approvers.push({
+      ...payload,
+      role: role,
+    });
   };
 
-
-
   const roles = data.approval_roles;
-
   if (roles && typeof roles === "object" && !Array.isArray(roles)) {
-
-    for (const val of Object.values(roles as Record<string, unknown>)) {
-
-      add(val);
-
+    for (const [roleKey, val] of Object.entries(roles as Record<string, unknown>)) {
+      add(val, roleKey);
     }
-
   }
-
-
 
   for (const [key, val] of Object.entries(data)) {
-
     if (key === "approval_roles") continue;
-
-    if (isApproverFieldKey(key)) add(val);
-
+    if (isApproverFieldKey(key)) add(val, key);
   }
 
-
-
   return approvers;
-
 }
 
 

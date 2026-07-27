@@ -14,6 +14,7 @@ class PoApproverLine extends Model
     protected $fillable = [
         'po_id',
         'approver_id',
+        'role',
         'status',
         'timestamp'
     ];
