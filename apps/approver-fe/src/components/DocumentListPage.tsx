@@ -111,113 +111,123 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
   };
 
   return (
-    <main className="p-6 space-y-4 max-w-6xl">
-      <div className="flex items-center justify-between">
+    <main className="p-6 md:p-8 space-y-6 max-w-[1400px] mx-auto w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[15px] font-semibold text-[#111827]">{title}</h1>
-          <p className="text-[12px] text-[#9CA3AF]">{subtitle}</p>
+          <h1 className="text-[18px] md:text-[20px] font-bold text-[#111827] tracking-tight">{title}</h1>
+          <p className="text-[13px] text-[#6B7280] mt-0.5">{subtitle}</p>
         </div>
         {createNode ? (
           createNode
         ) : (
           <Link
             href={createHref ?? "/upload"}
-            className="flex items-center gap-1.5 bg-[#1F3A5F] text-white text-[13px] font-medium px-3.5 py-2 rounded-md hover:bg-[#1a3350]"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#1F3A5F] to-[#2B5284] text-white text-[13px] font-medium px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md hover:opacity-90 transition-all duration-200"
           >
-            <Plus size={15} strokeWidth={2} />
+            <Plus size={16} strokeWidth={2} />
             {createLabel ?? "Upload PDF"}
           </Link>
         )}
       </div>
 
-      <div className="bg-white rounded-md border border-[#E3E6EA] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#E3E6EA] gap-3">
-          <div className="flex items-center gap-1 text-[13px]">
+      <div className="bg-white rounded-xl border border-[#E3E6EA] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] overflow-hidden transition-all">
+        {/* Filters and Tabs */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between px-5 py-4 border-b border-[#E3E6EA] gap-4">
+          <div className="flex items-center p-1 bg-[#F8F9FB] rounded-lg border border-[#E3E6EA]/80 w-fit">
             {tabs.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  activeTab === t.key ? "bg-[#1F3A5F] text-white" : "text-[#4B5563] hover:bg-[#F1F3F6]"
+                className={`px-4 py-1.5 rounded-md text-[12.5px] font-medium transition-all duration-200 ${
+                  activeTab === t.key 
+                    ? "bg-white text-[#1F3A5F] shadow-sm border border-[#E3E6EA]/50" 
+                    : "text-[#6B7280] hover:text-[#111827] border border-transparent"
                 }`}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative w-full sm:w-auto">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
               <input
-                placeholder="Cari nomor / deskripsi"
+                placeholder="Cari dokumen..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-[13px] border border-[#E3E6EA] rounded-md w-56 outline-none focus:border-[#1F3A5F] placeholder:text-[#9CA3AF]"
+                className="pl-9 pr-4 py-2 text-[13px] bg-[#F8F9FB] border border-[#E3E6EA] rounded-lg w-full sm:w-64 outline-none focus:bg-white focus:border-[#1F3A5F]/40 focus:ring-2 focus:ring-[#1F3A5F]/10 placeholder:text-[#9CA3AF] transition-all"
               />
             </div>
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="text-[13px] text-[#4B5563] border border-[#E3E6EA] rounded-md px-2 py-1.5 hover:bg-[#F1F3F6] outline-none cursor-pointer"
-            >
-              <option value="all">Semua Waktu</option>
-              <option value="today">Hari Ini</option>
-              <option value="week">7 Hari Terakhir</option>
-              <option value="month">Bulan Ini</option>
-            </select>
+            <div className="relative w-full sm:w-auto">
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full sm:w-auto appearance-none text-[13px] text-[#4B5563] bg-[#F8F9FB] border border-[#E3E6EA] rounded-lg pl-4 pr-10 py-2 hover:bg-white hover:border-[#D1D5DB] focus:bg-white focus:border-[#1F3A5F]/40 focus:ring-2 focus:ring-[#1F3A5F]/10 outline-none cursor-pointer transition-all"
+              >
+                <option value="all">Semua Waktu</option>
+                <option value="today">Hari Ini</option>
+                <option value="week">7 Hari Terakhir</option>
+                <option value="month">Bulan Ini</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none" />
+            </div>
           </div>
         </div>
 
-        {/* Loading state */}
+        {/* Loading / Empty States */}
         {loading ? (
-          <div className="px-6 py-12 flex flex-col items-center justify-center gap-3 text-sm text-[#6B7280]">
-            <Loader2 size={22} className="animate-spin text-[#1F3A5F]" />
-            <span>Memuat data...</span>
+          <div className="px-6 py-16 flex flex-col items-center justify-center gap-3 text-sm text-[#6B7280] bg-white">
+            <Loader2 size={24} className="animate-spin text-[#1F3A5F]" />
+            <span className="font-medium">Memuat data...</span>
           </div>
         ) : error ? (
-          <div className="px-6 py-10 flex flex-col items-center justify-center gap-2 text-sm text-red-600">
-            <AlertCircle size={20} />
-            <span>Gagal memuat data: {error}</span>
+          <div className="px-6 py-16 flex flex-col items-center justify-center gap-2 text-sm text-red-600 bg-red-50/30">
+            <AlertCircle size={24} />
+            <span className="font-medium">Gagal memuat data: {error}</span>
           </div>
         ) : rows.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-[#6B7280]">
-            Belum ada data.
+          <div className="px-6 py-20 text-center flex flex-col items-center justify-center gap-2 bg-white">
+            <div className="w-12 h-12 rounded-full bg-[#F1F3F6] flex items-center justify-center mb-2">
+              <Search size={20} className="text-[#9CA3AF]" />
+            </div>
+            <p className="text-[14px] font-medium text-[#4B5563]">Belum ada data</p>
+            <p className="text-[12.5px] text-[#9CA3AF]">Data {title} yang sesuai tidak ditemukan.</p>
           </div>
         ) : (
-          <>
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-[#9CA3AF] border-b border-[#E3E6EA]">
+                <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#6B7280] bg-gradient-to-r from-[#F8F9FB] to-white border-b border-[#E3E6EA]">
                   {columns.map((c) => (
-                    <th key={c.key} className={`px-4 py-2.5 font-medium ${c.align === "right" ? "text-right" : ""}`}>
+                    <th key={c.key} className={`px-5 py-3.5 ${c.align === "right" ? "text-right" : ""}`}>
                       {c.label}
                     </th>
                   ))}
-                  <th className="px-4 py-2.5 font-medium">Status</th>
-                  {onDelete && <th className="px-4 py-2.5 font-medium text-right">Aksi</th>}
+                  <th className="px-5 py-3.5">Status</th>
+                  {onDelete && <th className="px-5 py-3.5 text-right">Aksi</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E3E6EA]">
+              <tbody className="divide-y divide-[#E3E6EA]/70 bg-white">
                 {filtered.map((r) => (
                   <tr 
                     key={r.id} 
-                    className={`hover:bg-[#F8F9FB] ${onRowClick ? 'cursor-pointer' : ''}`}
+                    className={`hover:bg-[#F8F9FB] transition-colors duration-200 ${onRowClick ? 'cursor-pointer' : ''}`}
                     onClick={() => onRowClick?.(r)}
                   >
                     {columns.map((c) => (
                       <td
                         key={c.key}
-                        className={`px-4 py-3 ${
+                        className={`px-5 py-3.5 ${
                           c.align === "right" ? "text-right" : ""
                         } ${
-                          c.mono ? "font-mono text-[12.5px]" : ""
-                        } text-[#111827]`}
+                          c.mono ? "font-mono text-[13px] text-[#4B5563]" : "text-[13.5px] text-[#111827]"
+                        }`}
                       >
                         {c.type === 'badge' ? (
-                          <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap ${
-                            r[c.key] === 'Pengajuan Saya' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 
-                            r[c.key] === 'Butuh Approval Anda' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                            'bg-gray-50 text-gray-700 border border-gray-200'
+                          <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap shadow-sm border ${
+                            r[c.key] === 'Pengajuan Saya' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 
+                            r[c.key] === 'Butuh Approval Anda' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                            'bg-gray-50 text-gray-700 border-gray-200'
                           }`}>
                             {r[c.key] || c.defaultValue || '-'}
                           </span>
@@ -226,9 +236,11 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                         )}
                       </td>
                     ))}
-                    <td className="px-4 py-3"><StatusBadge status={r.status ?? 'pending'} /></td>
+                    <td className="px-5 py-3.5">
+                      <StatusBadge status={r.status ?? 'pending'} />
+                    </td>
                     {onDelete && (
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-5 py-3.5 text-right">
                         {r.can_cancel !== false ? (
                           <button
                             onClick={(e) => {
@@ -236,14 +248,14 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                               setDeleteError(null);
                               setDeletingRow(r);
                             }}
-                            className="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition-colors"
+                            className="px-3 py-1.5 text-[12px] font-medium text-red-600 bg-white hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20"
                           >
                             Batalkan
                           </button>
                         ) : (
                           <span
                             title="Pengajuan tidak dapat dibatalkan karena sudah ada approval yang disetujui"
-                            className="px-2.5 py-1 text-xs font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded cursor-not-allowed select-none"
+                            className="inline-block px-3 py-1.5 text-[12px] font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-md cursor-not-allowed select-none"
                           >
                             Batalkan
                           </span>
@@ -255,42 +267,43 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
               </tbody>
             </table>
 
-            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E3E6EA] text-[12px] text-[#9CA3AF]">
-              <span>Menampilkan {filtered.length} dari {rows.length} {title}</span>
-              <div className="flex items-center gap-1">
-                <button className="px-2.5 py-1 rounded-md border border-[#E3E6EA] hover:bg-[#F1F3F6]">Sebelumnya</button>
-                <button className="px-2.5 py-1 rounded-md border border-[#E3E6EA] hover:bg-[#F1F3F6]">Selanjutnya</button>
+            {/* Pagination Footer */}
+            <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-3.5 border-t border-[#E3E6EA] bg-white text-[12.5px] text-[#6B7280] gap-4">
+              <span>Menampilkan <span className="font-semibold text-[#111827]">{filtered.length}</span> dari <span className="font-semibold text-[#111827]">{rows.length}</span> {title}</span>
+              <div className="flex items-center gap-2">
+                <button className="px-3.5 py-1.5 rounded-lg border border-[#E3E6EA] hover:bg-[#F8F9FB] hover:text-[#111827] transition-colors font-medium text-[#4B5563] shadow-sm">Sebelumnya</button>
+                <button className="px-3.5 py-1.5 rounded-lg border border-[#E3E6EA] hover:bg-[#F8F9FB] hover:text-[#111827] transition-colors font-medium text-[#4B5563] shadow-sm">Selanjutnya</button>
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
 
       {/* Modal Konfirmasi Batal / Hapus */}
       {deletingRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Konfirmasi Pembatalan</h3>
-            <p className="text-sm text-gray-600">
-              Apakah Anda yakin ingin membatalkan pengajuan <span className="font-semibold text-gray-800">{deletingRow.nomor_ppab || deletingRow.nomor_po || deletingRow.nomor_mis || deletingRow.id}</span>? Tindakan ini tidak dapat dibatalkan.
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111827]/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-[#E3E6EA]">
+            <h3 className="text-[17px] font-bold text-gray-900 tracking-tight">Konfirmasi Pembatalan</h3>
+            <p className="text-[13.5px] text-gray-600 leading-relaxed">
+              Apakah Anda yakin ingin membatalkan pengajuan <span className="font-bold text-gray-900">{deletingRow.nomor_ppab || deletingRow.nomor_po || deletingRow.nomor_mis || deletingRow.id}</span>? Tindakan ini tidak dapat dibatalkan.
             </p>
             {deleteError && (
-              <div className="p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-3 text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-lg">
                 {deleteError}
               </div>
             )}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E3E6EA] mt-6">
               <button
                 disabled={isDeleting}
                 onClick={() => setDeletingRow(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 border border-gray-300 rounded-md"
+                className="px-4 py-2 text-[13px] font-medium text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-lg transition-colors"
               >
                 Kembali
               </button>
               <button
                 disabled={isDeleting}
                 onClick={handleConfirmDelete}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition-colors shadow-sm"
               >
                 {isDeleting ? (
                   <>
@@ -307,4 +320,4 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
       )}
     </main>
   );
-}   
+}
