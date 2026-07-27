@@ -11,7 +11,7 @@ export default function FsListPage() {
       title="Fund Settlement"
       subtitle="Pertanggungjawaban penggunaan dana"
       createLabel="Buat FS"
-      createHref="/upload"
+      createHref="/fs/new"
       columns={[
         { key: "number_fs", label: "Nomor FS", mono: true },
         { key: "requester_name", label: "Pemohon" },

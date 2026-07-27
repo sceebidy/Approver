@@ -63,11 +63,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mis/{id}', [MisController::class, 'show']);
     Route::delete('/mis/{id}', [MisController::class, 'destroy']);
 
-    // FR (read-only untuk saat ini)
+    // FR
     Route::get('/fr', [FrController::class, 'index']);
+    Route::get('/fr/categories', [FrController::class, 'categories']);
+    Route::get('/fr/approved-list', [FrController::class, 'approvedList']);
+    Route::post('/fr', [FrController::class, 'store']);
 
-    // FS (read-only untuk saat ini)
+    // FS
     Route::get('/fs', [FsController::class, 'index']);
+    Route::post('/fs', [FsController::class, 'store']);
 
     // Signed PDF download (dokumen resmi bertanda tangan digital)
     Route::get('/fs/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'fs');

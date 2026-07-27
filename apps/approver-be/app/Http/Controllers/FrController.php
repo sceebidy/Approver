@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Fr;
+use App\Models\KategoriFr;
+use App\Models\Tax;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FrController extends Controller
 {
@@ -26,4 +30,116 @@ class FrController extends Controller
 
         return response()->json(['success' => true, 'data' => $items]);
     }
+
+    public function categories()
+    {
+        $categories = KategoriFr::all();
+        $taxes = Tax::all();
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'categories' => $categories,
+                'taxes' => $taxes,
+            ]
+        ]);
+    }
+
+    public function approvedList()
+    {
+        $userId = auth()->id();
+        $items = Fr::where('requester_id', $userId)
+            ->where('status', 'approved')
+            ->latest()
+            ->get(['id', 'number_fr', 'keterangan', 'request_date_time']);
+
+        return response()->json(['success' => true, 'data' => $items]);
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'number_fr' => 'required|string|max:255|unique:fr,number_fr',
+            'kategori_fr_id' => 'required|integer|exists:kategori_fr,id',
+            'currency' => 'nullable|string|max:10',
+            'keterangan' => 'nullable|string',
+            'status' => 'nullable|string|in:draft,submitted',
+            'items' => 'required|array|min:1',
+            'items.*.deskripsi' => 'required|string',
+            'items.*.sub_total' => 'required|numeric',
+            'items.*.taxes' => 'nullable|array',
+            'items.*.taxes.*.tax_id' => 'required|integer|exists:tax,id',
+            'items.*.taxes.*.value' => 'required|numeric',
+        ]);
+
+        $userId = auth()->id();
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak terautentikasi. Silakan login terlebih dahulu.',
+            ], 401);
+        }
+
+        $kategori = KategoriFr::with('approverKategoriFr')->findOrFail($data['kategori_fr_id']);
+
+        $fr = DB::transaction(function () use ($data, $userId, $kategori) {
+            $status = $data['status'] ?? 'submitted';
+
+            $fr = Fr::create([
+                'requester_id' => $userId,
+                'seksi_id' => $kategori->seksi_id,
+                'kategori_fr_id' => $kategori->id,
+                'currency' => $data['currency'] ?? 'IDR',
+                'request_date_time' => now(),
+                'number_fr' => $data['number_fr'],
+                'keterangan' => $data['keterangan'] ?? null,
+                'status' => $status,
+            ]);
+
+            foreach ($data['items'] as $item) {
+                $subTotal = (float) $item['sub_total'];
+                $totalTax = 0;
+                
+                if (!empty($item['taxes']) && is_array($item['taxes'])) {
+                    foreach ($item['taxes'] as $tax) {
+                        $totalTax += (float) $tax['value'];
+                    }
+                }
+
+                $total = $subTotal + $totalTax;
+
+                $itemLine = $fr->itemLines()->create([
+                    'deskripsi' => $item['deskripsi'],
+                    'sub_total' => $subTotal,
+                    'total' => $total,
+                    'time_stamp' => now(),
+                ]);
+
+                if (!empty($item['taxes']) && is_array($item['taxes'])) {
+                    foreach ($item['taxes'] as $tax) {
+                        $itemLine->itemLineTaxes()->create([
+                            'tax_id' => $tax['tax_id'],
+                            'value' => $tax['value'],
+                            'timestamp' => now(),
+                        ]);
+                    }
+                }
+            }
+
+            foreach ($kategori->approverKategoriFr as $approverKat) {
+                $fr->approvers()->create([
+                    'approver_id' => $approverKat->user_id,
+                    'status' => 'pending',
+                    'update_date_time' => null,
+                ]);
+            }
+
+            return $fr->load('itemLines.itemLineTaxes', 'approvers.approver');
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $fr,
+        ], 201);
+    }
 }
+

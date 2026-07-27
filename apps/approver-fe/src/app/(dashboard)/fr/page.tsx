@@ -11,7 +11,7 @@ export default function FrListPage() {
       title="Fund Request"
       subtitle="Pengajuan permintaan dana"
       createLabel="Buat FR"
-      createHref="/upload"
+      createHref="/fr/new"
       columns={[
         { key: "number_fr", label: "Nomor FR", mono: true },
         { key: "requester_name", label: "Pemohon" },
