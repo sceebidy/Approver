@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
-export default function PendingApprovalsList() {
+export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id: number, type: string) => void }) {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -12,7 +12,8 @@ export default function PendingApprovalsList() {
   const fetchApprovals = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/submissions/pending", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+      const res = await fetch(`${apiUrl}/submissions/pending`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -34,8 +35,10 @@ export default function PendingApprovalsList() {
 
   const handleAction = async (type: string, id: number, action: 'approve' | 'reject') => {
     try {
-      const res = await fetch(`/api/submissions/${type}/${id}/${action}`, {
-        method: "POST"
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+      const res = await fetch(`${apiUrl}/submissions/${type}/${id}/${action}`, {
+        method: "POST",
+        credentials: "include"
       });
       const data = await res.json();
       if (res.ok) {
@@ -50,42 +53,52 @@ export default function PendingApprovalsList() {
   };
 
   if (loading) {
-    return <div className="p-6 text-center text-sm text-[#6B7280]">Memuat...</div>;
+    return <div className="p-10 text-center text-[13px] font-medium text-[#6B7280]">Memuat...</div>;
   }
 
   if (error) {
-    return <div className="p-6 text-center text-sm text-red-500">{error}</div>;
+    return <div className="p-10 text-center text-[13px] font-medium text-red-500 bg-red-50/30">{error}</div>;
   }
 
   if (approvals.length === 0) {
-    return <div className="p-6 text-center text-sm text-[#6B7280]">Tidak ada pengajuan yang menunggu persetujuan Anda.</div>;
+    return <div className="p-10 text-center text-[13.5px] font-medium text-[#6B7280]">Tidak ada pengajuan yang menunggu persetujuan Anda.</div>;
   }
 
   return (
-    <div className="divide-y divide-[#E3E6EA]">
+    <div className="divide-y divide-[#E3E6EA]/70">
       {approvals.map((item) => (
-        <div key={item.id} className="p-4 flex items-center justify-between hover:bg-[#F8F9FB] transition-colors">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-[#111827] uppercase">{item.type}</span>
+        <div 
+          key={item.id} 
+          className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#F8F9FB] transition-colors duration-200 group cursor-pointer"
+          onClick={() => onRowClick?.(item.document_id, item.type.toLowerCase())}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="font-bold text-[12px] text-[#1F3A5F] bg-[#1F3A5F]/10 px-2 py-0.5 rounded-md uppercase tracking-wider">{item.type}</span>
               <StatusBadge status={item.status} />
             </div>
-            <p className="text-sm font-medium text-[#374151] mt-1">{item.number}</p>
-            <p className="text-xs text-[#6B7280]">{item.description}</p>
-            <p className="text-[10px] text-[#9CA3AF] mt-1">Diajukan pada: {new Date(item.created_at).toLocaleString()}</p>
+            <p className="text-[14px] font-bold text-[#111827] truncate group-hover:text-[#1F3A5F] transition-colors">{item.number}</p>
+            <p className="text-[12.5px] text-[#6B7280] line-clamp-2 mt-0.5">{item.description}</p>
+            <p className="text-[11px] font-medium text-[#9CA3AF] mt-2">Diajukan: {new Date(item.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => handleAction(item.type, item.id, 'approve')}
-              className="flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAction(item.type, item.id, 'approve');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-green-500 text-green-600 hover:bg-green-50 rounded-lg text-[12px] font-bold shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all"
             >
-              <CheckCircle size={14} /> Setujui
+              <CheckCircle size={15} strokeWidth={2.5} /> Setujui
             </button>
             <button
-              onClick={() => handleAction(item.type, item.id, 'reject')}
-              className="flex items-center gap-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAction(item.type, item.id, 'reject');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-500 text-red-600 hover:bg-red-50 rounded-lg text-[12px] font-bold shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all"
             >
-              <XCircle size={14} /> Tolak
+              <XCircle size={15} strokeWidth={2.5} /> Tolak
             </button>
           </div>
         </div>

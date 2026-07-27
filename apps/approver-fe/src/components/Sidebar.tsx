@@ -88,10 +88,14 @@ export default function Sidebar() {
 
   const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
     <div className="flex flex-col h-full w-full bg-gradient-to-b from-white to-[#F8F9FB] overflow-hidden">
-      <div className={`h-14 flex items-center px-4 border-b border-[#E3E6EA] ${collapsed ? "justify-center" : "justify-between"}`}>
-        <div className={`flex items-center ${collapsed ? "justify-center" : ""}`}>
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#1F3A5F] to-[#2B5284] flex items-center justify-center text-white text-[12px] font-bold shadow-sm shrink-0">A</div>
-          {!collapsed && <span className="ml-2.5 text-[15px] font-bold text-[#111827] tracking-tight truncate">Approver</span>}
+      <div className={`h-16 flex items-center px-4 border-b border-[#E3E6EA] ${collapsed ? "justify-center" : "justify-between"}`}>
+        <div className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}>
+          <img 
+            src="/logo.png" 
+            alt="INL Logo" 
+            className={`object-contain transition-all duration-300 ${collapsed ? "w-10 h-10" : "w-12 h-12"}`} 
+          />
+          {!collapsed && <span className="text-[17px] font-extrabold text-[#111827] tracking-tight truncate">Approver</span>}
         </div>
         
         {/* Desktop Toggle Button */}
@@ -150,20 +154,20 @@ export default function Sidebar() {
             <span className="text-[12px] text-[#6B7280] font-medium truncate">{currentDate}</span>
             <button 
               onClick={handleLogout} 
-              className="relative w-8 h-8 rounded-md hover:bg-red-50 hover:text-red-600 text-[#4B5563] flex items-center justify-center transition-colors group shrink-0" 
+              className="relative w-8 h-8 rounded-md bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all group shrink-0 shadow-sm border border-red-100" 
               title="Logout"
             >
-              <LogOut size={16} strokeWidth={2} className="group-hover:text-red-600 transition-colors" />
+              <LogOut size={16} strokeWidth={2.5} className="transition-colors" />
             </button>
           </div>
         )}
         {collapsed && (
           <button 
             onClick={handleLogout} 
-            className="relative w-10 h-10 rounded-md hover:bg-red-50 hover:text-red-600 text-[#4B5563] flex items-center justify-center transition-colors group shrink-0" 
+            className="relative w-10 h-10 rounded-md bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all group shrink-0 shadow-sm border border-red-100" 
             title="Logout"
           >
-             <LogOut size={18} strokeWidth={2} className="group-hover:text-red-600 transition-colors" />
+             <LogOut size={18} strokeWidth={2.5} className="transition-colors" />
           </button>
         )}
         
@@ -198,18 +202,22 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Top Navbar */}
-      <div className="md:hidden flex items-center justify-between h-14 px-4 bg-white border-b border-[#E3E6EA] shrink-0 sticky top-0 z-20">
-        <div className="flex items-center">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#1F3A5F] to-[#2B5284] flex items-center justify-center text-white text-[12px] font-bold shadow-sm">A</div>
-          <span className="ml-2.5 text-[15px] font-bold text-[#111827] tracking-tight">Approver</span>
+      <div className="md:hidden flex items-center justify-between h-16 px-4 bg-white border-b border-[#E3E6EA] shrink-0 sticky top-0 z-20">
+        <div className="flex items-center gap-2.5">
+          <img 
+            src="/logo.png" 
+            alt="INL Logo" 
+            className="w-10 h-10 object-contain" 
+          />
+          <span className="text-[16px] font-extrabold text-[#111827] tracking-tight">Approver</span>
         </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={handleLogout}
-            className="relative w-9 h-9 rounded-full hover:bg-red-50 text-[#4B5563] hover:text-red-600 flex items-center justify-center transition-colors"
+            className="relative w-9 h-9 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all shadow-sm border border-red-100"
             title="Logout"
           >
-            <LogOut size={18} strokeWidth={2} />
+            <LogOut size={17} strokeWidth={2.5} />
           </button>
           <button 
             onClick={() => setIsMobileMenuOpen(true)}

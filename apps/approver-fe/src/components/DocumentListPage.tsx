@@ -112,10 +112,11 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
 
   return (
     <main className="p-6 md:p-8 space-y-6 max-w-[1400px] mx-auto w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[18px] md:text-[20px] font-bold text-[#111827] tracking-tight">{title}</h1>
-          <p className="text-[13px] text-[#6B7280] mt-0.5">{subtitle}</p>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5 relative pb-6">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[22px] md:text-[26px] font-extrabold text-[#111827] tracking-tight">{title}</h1>
+          <p className="text-[13.5px] text-[#6B7280] font-medium">{subtitle}</p>
+          <div className="absolute bottom-1 left-0 w-12 h-1 bg-gradient-to-r from-[#1F3A5F] to-[#2B5284] rounded-full"></div>
         </div>
         {createNode ? (
           createNode
