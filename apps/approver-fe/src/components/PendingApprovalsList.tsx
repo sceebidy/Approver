@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
 import StatusBadge from "./StatusBadge";
+import { getXsrfToken } from "@/lib/csrf";
 
 export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id: number, type: string) => void }) {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -36,19 +37,29 @@ export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id:
   const handleAction = async (type: string, id: number, action: 'approve' | 'reject') => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
-      const res = await fetch(`${apiUrl}/submissions/${type}/${id}/${action}`, {
+      const res = await fetch(`${apiUrl}/submissions/${type.toLowerCase()}/${id}/${action}`, {
         method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "X-XSRF-TOKEN": getXsrfToken(),
+        },
         credentials: "include"
       });
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(`Server mengembalikan respon non-JSON (${res.status}): ${text.slice(0, 150)}`);
+      }
+
       const data = await res.json();
-      if (res.ok) {
-        // Remove item from list
+      if (res.ok && data.success) {
         setApprovals(prev => prev.filter(item => item.id !== id));
       } else {
         alert(data.message || "Aksi gagal");
       }
     } catch (err) {
-      alert("Error: " + String(err));
+      alert(String(err));
     }
   };
 

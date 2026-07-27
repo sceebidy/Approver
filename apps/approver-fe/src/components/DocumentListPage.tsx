@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Plus, ChevronDown, Loader2, AlertCircle } from "lucide-react";
+import { Search, Plus, ChevronDown, Loader2, AlertCircle, FileText } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 export interface DocColumn {
@@ -23,6 +23,7 @@ export interface DocRow {
 interface Props {
   title: string;
   subtitle: string;
+  docType?: string;
   createLabel?: string;
   createHref?: string;
   createNode?: React.ReactNode;
@@ -43,13 +44,15 @@ const tabs = [
   { key: "rejected", label: "Ditolak" },
 ];
 
-export default function DocumentListPage({ title, subtitle, createLabel, createHref, createNode, columns, rows, loading, error, onDelete, onRowClick }: Props) {
+export default function DocumentListPage({ title, subtitle, docType, createLabel, createHref, createNode, columns, rows, loading, error, onDelete, onRowClick }: Props) {
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [deletingRow, setDeletingRow] = useState<DocRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const currentDocType = (docType || title).toLowerCase();
 
   const filtered = rows.filter((r) => {
     if (activeTab !== "all" && r.status !== activeTab) return false;
@@ -242,7 +245,18 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                     </td>
                     {onDelete && (
                       <td className="px-5 py-3.5 text-right">
-                        {r.can_cancel !== false ? (
+                        {r.status === 'approved' ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+                              window.open(`${apiUrl}/${currentDocType}/${r.id}/signed-pdf`, '_blank');
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-[#1F3A5F] bg-[#1F3A5F]/10 hover:bg-[#1F3A5F]/20 border border-[#1F3A5F]/20 rounded-md shadow-sm transition-all duration-200"
+                          >
+                            <FileText size={14} /> Lihat PDF
+                          </button>
+                        ) : r.can_cancel !== false ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

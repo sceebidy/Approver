@@ -244,6 +244,7 @@ class SubmissionController extends Controller
      */
     public function approve(Request $request, $type, $lineId)
     {
+        Log::info("[SubmissionController@approve] Called with type={$type}, lineId={$lineId}, user=" . ($request->user() ? $request->user()->id : 'null'));
         return $this->updateApprovalStatus($request, $type, $lineId, 'approved');
     }
 

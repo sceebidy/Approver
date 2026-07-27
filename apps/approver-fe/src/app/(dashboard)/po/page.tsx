@@ -36,6 +36,7 @@ export default function PoListPage() {
       <DocumentListPage
         title="Purchase Order"
         subtitle="Daftar pesanan pembelian ke vendor"
+        docType="po"
         createNode={
           <button
             onClick={() => setOpen(true)}

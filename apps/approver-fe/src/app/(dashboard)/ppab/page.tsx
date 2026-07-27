@@ -36,6 +36,7 @@ export default function PpabListPage() {
       <DocumentListPage
         title="PPAB"
         subtitle="Pengajuan Pembelian Anggaran Biaya"
+        docType="ppab"
         createNode={
           <button
             onClick={() => setOpen(true)}

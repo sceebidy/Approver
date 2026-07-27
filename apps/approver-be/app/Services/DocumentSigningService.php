@@ -60,6 +60,17 @@ class DocumentSigningService
             $documentType = 'fs';
         }
 
+        // Load relasi lengkap untuk dokumen jika belum di-load
+        if ($documentType === 'ppab' && method_exists($document, 'items')) {
+            $document->loadMissing(['items.lineSpecs', 'subtotals', 'user']);
+        } elseif ($documentType === 'po' && method_exists($document, 'itemLines')) {
+            $document->loadMissing(['itemLines', 'user']);
+        } elseif ($documentType === 'mis' && method_exists($document, 'itemLines')) {
+            $document->loadMissing(['itemLines', 'user']);
+        } elseif ($documentType === 'fs' && method_exists($document, 'itemLines')) {
+            $document->loadMissing(['itemLines', 'requester']);
+        }
+
         // Tentukan relasi approver_line berdasarkan jenis dokumen
         $approvers = collect();
         if ($documentType === 'fs') {

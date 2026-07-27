@@ -22,7 +22,7 @@ const QuickActionCard = ({ href, icon: Icon, label, desc }: any) => (
 );
 
 export default function DashboardPage() {
-  const [selectedDoc, setSelectedDoc] = useState<{ id: number; type: string } | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<{ id: number; type: "ppab" | "po" | "mis" } | null>(null);
 
   return (
     <main className="p-6 md:p-8 space-y-8 max-w-[1400px] mx-auto w-full">

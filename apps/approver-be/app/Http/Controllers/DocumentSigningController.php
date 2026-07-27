@@ -15,6 +15,7 @@ use App\Models\PoApproverLine;
 use App\Models\MisApproverLine;
 use App\Models\FrApprover;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class DocumentSigningController extends Controller
@@ -96,9 +97,14 @@ class DocumentSigningController extends Controller
     /**
      * Endpoint untuk mendownload/melihat PDF resmi bertanda tangan digital.
      */
-    public function downloadSignedPdf(Request $request, string $documentType, $id)
+    public function downloadSignedPdf(Request $request, ...$args)
     {
-        $documentType = strtolower($documentType);
+        $route = $request->route();
+        $documentType = strtolower($route->defaults['documentType'] ?? $route->parameter('documentType') ?? '');
+        $id = $route->parameter('id');
+
+        Log::info("[downloadSignedPdf] Corrected params: documentType={$documentType}, id={$id}");
+
         $document = null;
 
         if ($documentType === 'fs' || $documentType === 'fund_settlement') {
@@ -115,6 +121,7 @@ class DocumentSigningController extends Controller
         }
 
         if (!$document) {
+            Log::warning("[downloadSignedPdf] Document NOT found for type={$documentType}, id={$id}");
             return response()->json(['success' => false, 'message' => 'Dokumen tidak ditemukan.'], 404);
         }
 

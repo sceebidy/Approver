@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { getXsrfToken } from "@/lib/csrf";
 
 interface ApproverLine {
   id: number;
@@ -100,15 +101,26 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
-      const res = await fetch(`${apiUrl}/submissions/${docType}/${pendingLine.id}/${action}`, {
+      const res = await fetch(`${apiUrl}/submissions/${docType.toLowerCase()}/${pendingLine.id}/${action}`, {
         method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "X-XSRF-TOKEN": getXsrfToken(),
+        },
         credentials: "include"
       });
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await res.text();
+        throw new Error(`Server mengembalikan respon non-JSON (${res.status}): ${text.slice(0, 150)}`);
+      }
+
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.message || 'Aksi gagal');
       fetchDetail(); // Refresh data to show updated status
     } catch (err: any) {
-      alert("Error: " + err.message);
+      alert(err.message);
     }
   };
 

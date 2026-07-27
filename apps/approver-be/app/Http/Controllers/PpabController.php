@@ -23,17 +23,31 @@ class PpabController extends Controller
             });
         }
 
-        $items = $query->get()->map(fn($p) => [
+        $items = $query->get()->map(function($p) use ($user) {
+            $approverLines = $p->approverLines;
+            $totalLines = $approverLines->count();
+            $approvedCount = $approverLines->where('status', 'approved')->count();
+            $rejectedCount = $approverLines->where('status', 'rejected')->count();
+
+            $status = 'pending';
+            if ($rejectedCount > 0) {
+                $status = 'rejected';
+            } elseif ($totalLines > 0 && $approvedCount === $totalLines) {
+                $status = 'approved';
+            }
+
+            return [
                 'id'          => $p->id,
                 'nomor_ppab'  => $p->nomor_ppab,
                 'deskripsi'   => $p->deskripsi,
                 'user_id'     => $p->user_id,
                 'user_name'   => $p->user?->name,
                 'created_at'  => $p->created_at,
-                'status'      => 'pending',
-                'can_cancel'  => !$p->approverLines->contains('status', 'approved'),
-                'request_type'=> $p->user_id === $user->id ? 'Pengajuan Saya' : ($p->approverLines->contains('approver_id', $user->id) ? 'Butuh Approval Anda' : 'Lainnya'),
-            ]);
+                'status'      => $status,
+                'can_cancel'  => !$approverLines->contains('status', 'approved'),
+                'request_type'=> $p->user_id === $user->id ? 'Pengajuan Saya' : ($approverLines->contains('approver_id', $user->id) ? 'Butuh Approval Anda' : 'Lainnya'),
+            ];
+        });
 
         return response()->json(['success' => true, 'data' => $items]);
     }

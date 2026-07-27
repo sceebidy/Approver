@@ -36,6 +36,7 @@ export default function MisListPage() {
       <DocumentListPage
         title="MIS"
         subtitle="Material Issue Slip — penerimaan & pengeluaran barang"
+        docType="mis"
         createNode={
           <button
             onClick={() => setOpen(true)}

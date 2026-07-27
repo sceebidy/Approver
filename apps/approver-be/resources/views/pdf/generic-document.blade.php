@@ -67,7 +67,7 @@
                             @if(!empty($approver['qr_code_base64']))
                                 <img src="{{ $approver['qr_code_base64'] }}" class="qr-img" alt="QR Code">
                             @endif
-                            <div class="signed-notice">&#10003; Ditandatangani secara elektronik</div>
+                            <div class="signed-notice">Ditandatangani secara elektronik</div>
                             <div class="signer-name">{{ $approver['name'] }}</div>
                             <div class="signer-title">{{ $approver['jabatan'] }}</div>
                             <div class="signed-date">{{ $approver['signed_at'] }}</div>
