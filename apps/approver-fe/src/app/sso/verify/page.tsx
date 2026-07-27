@@ -23,7 +23,7 @@ export default function SSOVerifyPage() {
 
       try {
         const appId = process.env.NEXT_PUBLIC_APP_ID;
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const apiUrl = "/api";
 
         // 1. Get CSRF Token and initialize session
         const csrfRes = await fetch(`${apiUrl}/auth/csrf`, {

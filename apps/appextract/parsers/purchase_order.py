@@ -2,35 +2,28 @@ import re
 from .utils import clean_num
 
 
-def _extract_po_approval(text: str, vendor_nama: str = "Pihak Supplier / Vendor") -> dict:
-    """Ambil blok 4 nama + 4 jabatan di baris terakhir dokumen PO."""
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
-    try:
-        # Temukan baris yang mengandung semua kata kunci (tanpa mempedulikan spasi)
-        idx = -1
-        for i, line in enumerate(lines):
-            cleaned = line.replace(" ", "").lower()
-            if "acceptedby" in cleaned and "preparedby" in cleaned and "checkedby" in cleaned and "approvedby" in cleaned:
-                idx = i
-                break
-        
-        if idx == -1:
-            return {}
-            
-        names_line = lines[idx + 1] if idx + 1 < len(lines) else ""
-        jabatan_line = lines[idx + 2] if idx + 2 < len(lines) else ""
-        
+def _extract_po_approval(layout_text: str, vendor_nama: str = "Pihak Supplier / Vendor") -> dict:
+    from .utils import extract_roles_dynamically
+    roles = extract_roles_dynamically(layout_text, ["acceptedby", "preparedby", "checkedby", "approvedby"])
+    
+    if len(roles) >= 4:
         return {
-            "accepted_by": vendor_nama,
-            "prepared_by": "TOMY INRI AKBAR LINGGA (ASISTEN IT)",
-            "checked_by": "OKA ARITONANG (KASUBAG SISTEM & IT)",
-            "approved_by": "FERDIANSYAH (KABAG SDM & SISTEM)"
+            "accepted_by": roles[0] if roles[0] else vendor_nama,
+            "prepared_by": roles[1],
+            "checked_by": roles[2],
+            "approved_by": roles[3]
         }
-    except Exception:
-        return {}
+    
+    # Fallback jika ekstraksi dinamis gagal
+    return {
+        "accepted_by": vendor_nama,
+        "prepared_by": "",
+        "checked_by": "",
+        "approved_by": ""
+    }
 
 
-def parse(text: str) -> dict:
+def parse(text: str, layout_text: str = "") -> dict:
     data = {"doc_type": "PURCHASE_ORDER"}
 
     m = re.search(r"([A-Z]+/[A-Z]+-[A-Z]+/\d+)", text)
@@ -92,6 +85,6 @@ def parse(text: str) -> dict:
     data["grand_total"] = clean_num(m.group(1)) if m else None
 
     vendor_nama = data.get("vendor", {}).get("nama") or "Pihak Supplier / Vendor"
-    data["approval_roles"] = _extract_po_approval(text, vendor_nama)
+    data["approval_roles"] = _extract_po_approval(layout_text, vendor_nama)
 
     return data

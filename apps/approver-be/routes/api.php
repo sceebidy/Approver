@@ -34,6 +34,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/portal/organization-units', [PortalController::class, 'organizationUnits']);
     Route::get('/portal/placements', [PortalController::class, 'placements']);
 
+    // Submission routes
+    Route::post('/submissions', [\App\Http\Controllers\SubmissionController::class, 'create']);
+    Route::get('/submissions/pending', [\App\Http\Controllers\SubmissionController::class, 'pendingApprovals']);
+    Route::post('/submissions/{type}/{lineId}/approve', [\App\Http\Controllers\SubmissionController::class, 'approve']);
+    Route::post('/submissions/{type}/{lineId}/reject', [\App\Http\Controllers\SubmissionController::class, 'reject']);
+
 });
 
 // Existing routes (might need auth later, but keep as is for now)
