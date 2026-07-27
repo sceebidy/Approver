@@ -32,6 +32,8 @@ interface Props {
   error?: string | null;
   /** Dipanggil ketika user mengonfirmasi pembatalan/penghapusan pengajuan */
   onDelete?: (row: DocRow) => Promise<void>;
+  /** Dipanggil ketika baris dokumen diklik */
+  onRowClick?: (row: DocRow) => void;
 }
 
 const tabs = [
@@ -41,7 +43,7 @@ const tabs = [
   { key: "rejected", label: "Ditolak" },
 ];
 
-export default function DocumentListPage({ title, subtitle, createLabel, createHref, createNode, columns, rows, loading, error, onDelete }: Props) {
+export default function DocumentListPage({ title, subtitle, createLabel, createHref, createNode, columns, rows, loading, error, onDelete, onRowClick }: Props) {
   const [activeTab, setActiveTab] = useState("all");
   const [deletingRow, setDeletingRow] = useState<DocRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -161,7 +163,11 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
               </thead>
               <tbody className="divide-y divide-[#E3E6EA]">
                 {filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-[#F8F9FB]">
+                  <tr 
+                    key={r.id} 
+                    className={`hover:bg-[#F8F9FB] ${onRowClick ? 'cursor-pointer' : ''}`}
+                    onClick={() => onRowClick?.(r)}
+                  >
                     {columns.map((c) => (
                       <td
                         key={c.key}
@@ -189,7 +195,8 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                       <td className="px-4 py-3 text-right">
                         {r.can_cancel !== false ? (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setDeleteError(null);
                               setDeletingRow(r);
                             }}

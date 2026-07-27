@@ -29,6 +29,30 @@ class SubmissionController extends Controller
         $approvers = $request->approvers;
         $user = $request->user();
 
+        // Validate unique document numbers
+        if ($type === 'ppab') {
+            $request->validate([
+                'data.nomor_ppab' => 'required|unique:ppab,nomor_ppab'
+            ], [
+                'data.nomor_ppab.unique' => 'Pengajuan dengan Nomor PPAB ini sudah ada di sistem.',
+                'data.nomor_ppab.required' => 'Nomor PPAB wajib diisi.'
+            ]);
+        } elseif ($type === 'po') {
+            $request->validate([
+                'data.nomor_po' => 'required|unique:po,nomor_po'
+            ], [
+                'data.nomor_po.unique' => 'Pengajuan dengan Nomor PO ini sudah ada di sistem.',
+                'data.nomor_po.required' => 'Nomor PO wajib diisi.'
+            ]);
+        } elseif ($type === 'mis') {
+            $request->validate([
+                'data.nomor_mis' => 'required|unique:mis,nomor_mis'
+            ], [
+                'data.nomor_mis.unique' => 'Pengajuan dengan Nomor MIS ini sudah ada di sistem.',
+                'data.nomor_mis.required' => 'Nomor MIS wajib diisi.'
+            ]);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -41,6 +65,35 @@ class SubmissionController extends Controller
                     'nomor_ppab' => $data['nomor_ppab'] ?? 'PPAB-' . time(),
                 ]);
                 $documentId = $ppab->id;
+
+                if (isset($data['items']) && is_array($data['items'])) {
+                    foreach ($data['items'] as $item) {
+                        $itemModel = $ppab->items()->create([
+                            'deskripsi' => $item['deskripsi'] ?? '',
+                            'satuan' => $item['satuan'] ?? '',
+                            'qty' => $item['qty'] ?? 0,
+                            'harga_satuan' => $item['harga_satuan'] ?? 0,
+                            'kategori' => $item['kategori'] ?? null,
+                            'currency' => $item['currency'] ?? 'IDR',
+                        ]);
+
+                        if (!empty($item['line_specs']) && is_array($item['line_specs'])) {
+                            foreach ($item['line_specs'] as $spec) {
+                                $itemModel->lineSpecs()->create([
+                                    'deskripsi' => $spec['deskripsi'],
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+                if (!empty($data['subtotals']) && is_array($data['subtotals'])) {
+                    foreach ($data['subtotals'] as $subtotal) {
+                        $ppab->subtotals()->create([
+                            'deskripsi' => $subtotal['deskripsi'],
+                        ]);
+                    }
+                }
 
                 foreach ($approvers as $approverData) {
                     $approver = $this->getOrCreateUser($approverData);
@@ -59,6 +112,18 @@ class SubmissionController extends Controller
                 ]);
                 $documentId = $po->id;
 
+                if (isset($data['items']) && is_array($data['items'])) {
+                    foreach ($data['items'] as $item) {
+                        $po->itemLines()->create([
+                            'deskripsi' => $item['deskripsi'] ?? '',
+                            'satuan' => $item['satuan'] ?? '',
+                            'qty' => $item['qty'] ?? 0,
+                            'harga_satuan' => $item['harga_satuan'] ?? 0,
+                            'spec' => $item['spec'] ?? null,
+                        ]);
+                    }
+                }
+
                 foreach ($approvers as $approverData) {
                     $approver = $this->getOrCreateUser($approverData);
                     $po->approverLines()->create([
@@ -74,6 +139,17 @@ class SubmissionController extends Controller
                     'tgl_mis' => $data['tgl_mis'] ?? now()->toDateString(),
                 ]);
                 $documentId = $mis->id;
+
+                if (isset($data['items']) && is_array($data['items'])) {
+                    foreach ($data['items'] as $item) {
+                        $mis->itemLines()->create([
+                            'desc' => $item['desc'] ?? '',
+                            'satuan' => $item['satuan'] ?? '',
+                            'qty' => $item['qty'] ?? 0,
+                            'remark' => $item['remark'] ?? null,
+                        ]);
+                    }
+                }
 
                 foreach ($approvers as $approverData) {
                     $approver = $this->getOrCreateUser($approverData);

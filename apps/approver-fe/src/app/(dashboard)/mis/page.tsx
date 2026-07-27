@@ -4,11 +4,13 @@ import DocumentListPage from "@/components/DocumentListPage";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import UploadModal from "@/components/UploadModal";
+import DocumentDetailModal from "@/components/DocumentDetailModal";
 import { useDocumentList } from "@/lib/useDocumentList";
 import { refreshCsrfCookie } from "@/lib/csrf";
 
 export default function MisListPage() {
   const [open, setOpen] = useState(false);
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const { rows, loading, error, refresh } = useDocumentList("mis");
 
   const handleDelete = async (row: any) => {
@@ -54,12 +56,19 @@ export default function MisListPage() {
         loading={loading}
         error={error}
         onDelete={handleDelete}
+        onRowClick={(row) => setSelectedDocId(Number(row.id))}
       />
       <UploadModal
         isOpen={open}
         onClose={() => setOpen(false)}
         docType="mis"
         onSaved={refresh}
+      />
+      <DocumentDetailModal
+        isOpen={selectedDocId !== null}
+        onClose={() => setSelectedDocId(null)}
+        docId={selectedDocId}
+        docType="mis"
       />
     </>
   );

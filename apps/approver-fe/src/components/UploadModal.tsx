@@ -52,8 +52,16 @@ function buildPayload(docType: 'ppab' | 'po' | 'mis', raw: any): any {
           harga_satuan: Number(item.harga_satuan ?? 0),
           kategori: item.kategori ?? null,
           currency: item.currency ?? 'IDR',
+          line_specs: item.detail_lisensi 
+            ? Object.entries(item.detail_lisensi).map(([k, v]) => ({ deskripsi: `${k.toUpperCase()} : ${v}` }))
+            : [],
         }))
       : [];
+
+    const subtotals = [];
+    if (raw.jumlah_excl_ppn) subtotals.push({ deskripsi: `Jumlah Excl. PPN 11% : Rp ${Number(raw.jumlah_excl_ppn).toLocaleString('id-ID')}` });
+    if (raw.ppn_11_persen) subtotals.push({ deskripsi: `PPN 11% : Rp ${Number(raw.ppn_11_persen).toLocaleString('id-ID')}` });
+    if (raw.jumlah_incl_ppn) subtotals.push({ deskripsi: `Jumlah Incl. PPN 11% : Rp ${Number(raw.jumlah_incl_ppn).toLocaleString('id-ID')}` });
 
     // Deskripsi PPAB tidak ada di extractor — gunakan sumber_anggaran jika ada,
     // atau kebun_unit, atau string kosong (user bisa edit di UI sebelum submit)
@@ -66,6 +74,7 @@ function buildPayload(docType: 'ppab' | 'po' | 'mis', raw: any): any {
       nomor_ppab: raw.nomor_ppab ?? '',
       deskripsi,
       items,
+      subtotals,
     };
   }
 

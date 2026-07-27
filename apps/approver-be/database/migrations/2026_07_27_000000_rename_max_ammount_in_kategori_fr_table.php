@@ -13,9 +13,8 @@ class RenameMaxAmmountInKategoriFrTable extends Migration
      */
     public function up()
     {
-        Schema::table('kategori_fr', function (Blueprint $table) {
-            $table->renameColumn('max_ammount', 'max_amount');
-        });
+        // Using raw SQL to avoid Doctrine DBAL version conflicts in Laravel 8
+        \Illuminate\Support\Facades\DB::statement('ALTER TABLE kategori_fr RENAME COLUMN max_ammount TO max_amount');
     }
 
     /**
@@ -25,8 +24,6 @@ class RenameMaxAmmountInKategoriFrTable extends Migration
      */
     public function down()
     {
-        Schema::table('kategori_fr', function (Blueprint $table) {
-            $table->renameColumn('max_amount', 'max_ammount');
-        });
+        \Illuminate\Support\Facades\DB::statement('ALTER TABLE kategori_fr RENAME COLUMN max_amount TO max_ammount');
     }
 }

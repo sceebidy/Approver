@@ -100,6 +100,27 @@ class MisController extends Controller
         ], 201);
     }
 
+    public function show($id)
+    {
+        $mis = Mis::with(['user:id,name', 'itemLines', 'approverLines.approver:id,name'])->findOrFail($id);
+        
+        $userId = auth()->id();
+        $isOwner = $mis->user_id === $userId;
+        $isApprover = $mis->approverLines->contains('approver_id', $userId);
+        
+        if (!$isOwner && !$isApprover) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
+        }
+
+        $mis->request_type = $isOwner ? 'Pengajuan Saya' : 'Perlu Persetujuan';
+        $mis->can_cancel = !$mis->approverLines->contains('status', 'approved');
+
+        return response()->json([
+            'success' => true,
+            'data' => $mis
+        ]);
+    }
+
     public function destroy($id)
     {
         $mis = Mis::with('approverLines')->findOrFail($id);

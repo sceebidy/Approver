@@ -110,6 +110,27 @@ class PoController extends Controller
         ], 201);
     }
 
+    public function show($id)
+    {
+        $po = Po::with(['user:id,name', 'itemLines', 'subtotals', 'approverLines.approver:id,name'])->findOrFail($id);
+        
+        $userId = auth()->id();
+        $isOwner = $po->user_id === $userId;
+        $isApprover = $po->approverLines->contains('approver_id', $userId);
+        
+        if (!$isOwner && !$isApprover) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
+        }
+
+        $po->request_type = $isOwner ? 'Pengajuan Saya' : 'Perlu Persetujuan';
+        $po->can_cancel = !$po->approverLines->contains('status', 'approved');
+
+        return response()->json([
+            'success' => true,
+            'data' => $po
+        ]);
+    }
+
     public function destroy($id)
     {
         $po = Po::with('approverLines')->findOrFail($id);

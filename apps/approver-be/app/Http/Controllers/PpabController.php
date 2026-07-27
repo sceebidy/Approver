@@ -116,6 +116,27 @@ class PpabController extends Controller
         ], 201);
     }
 
+    public function show($id)
+    {
+        $ppab = Ppab::with(['user:id,name', 'items.lineSpecs', 'subtotals', 'approverLines.approver:id,name'])->findOrFail($id);
+        
+        $userId = auth()->id();
+        $isOwner = $ppab->user_id === $userId;
+        $isApprover = $ppab->approverLines->contains('approver_id', $userId);
+        
+        if (!$isOwner && !$isApprover) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
+        }
+
+        $ppab->request_type = $isOwner ? 'Pengajuan Saya' : 'Perlu Persetujuan';
+        $ppab->can_cancel = !$ppab->approverLines->contains('status', 'approved');
+
+        return response()->json([
+            'success' => true,
+            'data' => $ppab
+        ]);
+    }
+
     public function destroy($id)
     {
         $ppab = Ppab::with('approverLines')->findOrFail($id);
