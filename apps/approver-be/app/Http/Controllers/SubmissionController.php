@@ -9,6 +9,7 @@ use App\Models\Mis;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\DocumentSigningService;
 
 class SubmissionController extends Controller
 {
@@ -179,23 +180,103 @@ class SubmissionController extends Controller
     private function updateApprovalStatus(Request $request, $type, $lineId, $status)
     {
         $userId = $request->user()->id;
-        $model = null;
+        $type = strtolower($type);
+        if ($type === 'fund_settlement') {
+            $type = 'fs';
+        }
+
+        $model    = null;
+        $document = null;
 
         if ($type === 'ppab') {
             $model = \App\Models\PpabApproverLine::where('id', $lineId)->where('approver_id', $userId)->first();
+            if ($model) {
+                $document = \App\Models\Ppab::find($model->ppab_id);
+            }
         } elseif ($type === 'po') {
             $model = \App\Models\PoApproverLine::where('id', $lineId)->where('approver_id', $userId)->first();
+            if ($model) {
+                $document = \App\Models\Po::find($model->po_id);
+            }
         } elseif ($type === 'mis') {
             $model = \App\Models\MisApproverLine::where('id', $lineId)->where('approver_id', $userId)->first();
+            if ($model) {
+                $document = \App\Models\Mis::find($model->mis_id);
+            }
+        } elseif ($type === 'fs') {
+            $model = \App\Models\FsApprover::where('id', $lineId)->where('approver_id', $userId)->first();
+            if ($model) {
+                $document = \App\Models\FundSettlement::find($model->fs_id);
+            }
+        } elseif ($type === 'fr') {
+            $model = \App\Models\FrApprover::where('id', $lineId)->where('approver_id', $userId)->first();
+            if ($model) {
+                $document = \App\Models\Fr::find($model->fr_id);
+            }
         }
 
-        if (!$model) {
+        if (!$model || !$document) {
             return response()->json(['success' => false, 'message' => 'Approval line not found or unauthorized.'], 404);
         }
 
-        $model->status = $status;
-        $model->timestamp = now();
-        $model->save();
+        // ---------------------------------------------------------------
+        // TRANSACTION: hanya operasi DB ringan (update status + token)
+        // ---------------------------------------------------------------
+        $shouldGeneratePdf = false;
+
+        DB::transaction(function () use ($model, $status, $document, $type, &$shouldGeneratePdf) {
+            $signingService = app(DocumentSigningService::class);
+
+            $model->status = $status;
+            if ($status === 'approved') {
+                $model->signed_at = now();
+                $signingService->generateVerifyToken($model); // hash + save: ringan, aman dalam transaction
+            }
+            $model->save();
+
+            // Cek apakah SEMUA approver_line untuk dokumen ini sudah approved
+            if ($status === 'approved') {
+                $approverLines = collect();
+                if ($type === 'fs') {
+                    $approverLines = \App\Models\FsApprover::where('fs_id', $document->id)->lockForUpdate()->get();
+                } elseif ($type === 'fr') {
+                    $approverLines = \App\Models\FrApprover::where('fr_id', $document->id)->lockForUpdate()->get();
+                } elseif ($type === 'ppab') {
+                    $approverLines = \App\Models\PpabApproverLine::where('ppab_id', $document->id)->lockForUpdate()->get();
+                } elseif ($type === 'po') {
+                    $approverLines = \App\Models\PoApproverLine::where('po_id', $document->id)->lockForUpdate()->get();
+                } elseif ($type === 'mis') {
+                    $approverLines = \App\Models\MisApproverLine::where('mis_id', $document->id)->lockForUpdate()->get();
+                }
+
+                $totalLines    = $approverLines->count();
+                $approvedLines = $approverLines->where('status', 'approved')->count();
+
+                if ($totalLines > 0 && $totalLines === $approvedLines && empty($document->signed_pdf_path)) {
+                    // Semua approver sudah menyetujui & PDF belum pernah di-generate
+                    // Set flag — generateSignedPdf() dipanggil di LUAR transaction (heavy I/O)
+                    $shouldGeneratePdf = true;
+                }
+            }
+        });
+
+        // ---------------------------------------------------------------
+        // SETELAH TRANSACTION COMMIT: generate PDF (I/O berat, tidak perlu lock)
+        // ---------------------------------------------------------------
+        if ($shouldGeneratePdf) {
+            try {
+                $signingService = app(DocumentSigningService::class);
+                $signingService->generateSignedPdf($type, $document->fresh());
+            } catch (\Throwable $e) {
+                // Jangan gagalkan response approve jika PDF gagal dibuat.
+                // PDF dapat di-generate ulang lewat endpoint downloadSignedPdf.
+                Log::error("[DocumentSigning] Gagal generate PDF setelah approve {$type}#{$document->id}: " . $e->getMessage(), [
+                    'type'        => $type,
+                    'document_id' => $document->id,
+                    'exception'   => $e,
+                ]);
+            }
+        }
 
         return response()->json([
             'success' => true,

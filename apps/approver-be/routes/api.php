@@ -23,6 +23,7 @@ use App\Http\Controllers\PoController;
 use App\Http\Controllers\MisController;
 use App\Http\Controllers\FrController;
 use App\Http\Controllers\FsController;
+use App\Http\Controllers\DocumentSigningController;
 
 // Public Routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -61,6 +62,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // FS (read-only untuk saat ini)
     Route::get('/fs', [FsController::class, 'index']);
+
+    // Signed PDF download (dokumen resmi bertanda tangan digital)
+    Route::get('/fs/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'fs');
+    Route::get('/ppab/{id}/signed-pdf', [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'ppab');
+    Route::get('/po/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'po');
+    Route::get('/mis/{id}/signed-pdf',  [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'mis');
+    Route::get('/fr/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'fr');
 });
 
 // Existing public routes

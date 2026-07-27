@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DocumentSigningController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Halaman verifikasi publik (QR Code scan) — throttled untuk mencegah brute-force token
+Route::middleware('throttle:20,1')->get(
+    '/verify/{documentType}/{documentId}/{approverLineId}',
+    [DocumentSigningController::class, 'verify']
+)->name('document.verify');
