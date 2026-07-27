@@ -1,7 +1,7 @@
 import re
 
 
-def parse(text: str) -> dict:
+def parse(text: str, layout_text: str = "") -> dict:
     data = {"doc_type": "MIS"}
 
     m = re.search(r"MIS\s*:\s*(\d+)", text)
@@ -39,15 +39,30 @@ def parse(text: str) -> dict:
             })
     data["items"] = items
 
-    lines_stripped = [l.strip() for l in text.split("\n") if l.strip()]
-    approval = {}
-    try:
-        idx = lines_stripped.index("Requested/ReceivedBy CheckedBy IssuedBy ApprovedBy")
-        names_line = lines_stripped[idx + 1] if idx + 1 < len(lines_stripped) else ""
-        jabatan_line = lines_stripped[idx + 2] if idx + 2 < len(lines_stripped) else ""
-        approval = {"baris_nama": names_line, "baris_jabatan": jabatan_line}
-    except ValueError:
-        pass
-    data["approval"] = approval
-
+    from .utils import extract_roles_dynamically
+    roles = extract_roles_dynamically(layout_text, ["requested/receivedby", "checkedby", "issuedby", "approvedby"])
+    
+    if len(roles) >= 5:
+        data["approval_roles"] = {
+            "requested_received_by": roles[0],
+            "checked_by": roles[1],
+            "issued_by": roles[2],
+            "approved_by": f"{roles[3]}, {roles[4]}"
+        }
+    elif len(roles) >= 4:
+        data["approval_roles"] = {
+            "requested_received_by": roles[0],
+            "checked_by": roles[1],
+            "issued_by": roles[2],
+            "approved_by": roles[3]
+        }
+    else:
+        # Fallback if it fails
+        data["approval_roles"] = {
+            "requested_received_by": "",
+            "checked_by": "",
+            "issued_by": "",
+            "approved_by": ""
+        }
+    
     return data

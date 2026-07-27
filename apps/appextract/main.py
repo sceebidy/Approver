@@ -12,7 +12,8 @@ app = FastAPI(title="PDF to JSON Microservice")
 def pdf_to_json(file_path: str) -> dict:
     with pdfplumber.open(file_path) as pdf:
         full_text = "\n".join(page.extract_text() or "" for page in pdf.pages)
-    return parse_document(full_text)
+        layout_text = "\n".join(page.extract_text(layout=True) or "" for page in pdf.pages)
+    return parse_document(full_text, layout_text)
 
 
 @app.post("/convert")

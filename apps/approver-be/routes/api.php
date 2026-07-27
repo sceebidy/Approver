@@ -55,6 +55,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // FS (read-only untuk saat ini)
     Route::get('/fs', [FsController::class, 'index']);
+
+    // Submission routes
+    Route::post('/submissions', [\App\Http\Controllers\SubmissionController::class, 'create']);
+    Route::get('/submissions/pending', [\App\Http\Controllers\SubmissionController::class, 'pendingApprovals']);
+    Route::post('/submissions/{type}/{lineId}/approve', [\App\Http\Controllers\SubmissionController::class, 'approve']);
+    Route::post('/submissions/{type}/{lineId}/reject', [\App\Http\Controllers\SubmissionController::class, 'reject']);
 });
 
 // Existing public routes

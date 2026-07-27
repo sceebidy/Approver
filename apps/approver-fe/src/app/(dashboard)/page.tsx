@@ -1,6 +1,7 @@
 import KpiCard from "@/components/KpiCard";
 import DocumentRow, { DocumentItem } from "@/components/DocumentRow";
 import { Clock, ClipboardList, FileText, Wallet } from "lucide-react";
+import PendingApprovalsList from "@/components/PendingApprovalsList";
 
 const kpis: any[] = [];
 
@@ -15,6 +16,16 @@ export default function DashboardPage() {
         ) : (
           kpis.map((k) => <KpiCard key={k.label} {...k} />)
         )}
+      </div>
+
+      <div className="bg-white rounded-md border border-[#E3E6EA] overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#E3E6EA] flex items-center justify-between">
+          <div>
+            <h3 className="text-[14px] font-semibold text-[#111827]">Menunggu Persetujuan Saya</h3>
+            <p className="text-[12px] text-[#9CA3AF]">Daftar pengajuan yang memerlukan tindakan Anda</p>
+          </div>
+        </div>
+        <PendingApprovalsList />
       </div>
 
       <div className="bg-white rounded-md border border-[#E3E6EA] overflow-hidden">

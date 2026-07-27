@@ -24,7 +24,7 @@ export default function SSOVerifyPage() {
 
       try {
         const appId = process.env.NEXT_PUBLIC_APP_ID;
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
         const baseUrl = apiUrl.replace(/\/api\/?$/, '');
 
         // 1. Get CSRF cookie and initialize session

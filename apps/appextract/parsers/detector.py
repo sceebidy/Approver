@@ -18,14 +18,14 @@ def detect_doc_type(text: str) -> str:
     return "UNKNOWN"
 
 
-def parse_document(text: str) -> dict:
+def parse_document(text: str, layout_text: str = "") -> dict:
     doc_type = detect_doc_type(text)
     if doc_type == "PURCHASE_ORDER":
-        return purchase_order.parse(text)
+        return purchase_order.parse(text, layout_text)
     elif doc_type == "PURCHASE_ORDER_V2":
         return purchase_order_v2.parse(text)
     elif doc_type == "MIS":
-        return mis.parse(text)
+        return mis.parse(text, layout_text)
     elif doc_type == "PPAB":
         return ppab.parse(text)
     else:
