@@ -1,8 +1,11 @@
-import DocumentListPage from "@/components/DocumentListPage";
+"use client";
 
-const rows: any[] = [];
+import DocumentListPage from "@/components/DocumentListPage";
+import { useDocumentList } from "@/lib/useDocumentList";
 
 export default function FsListPage() {
+  const { rows, loading, error } = useDocumentList("fs");
+
   return (
     <DocumentListPage
       title="Fund Settlement"
@@ -10,13 +13,16 @@ export default function FsListPage() {
       createLabel="Buat FS"
       createHref="/upload"
       columns={[
-        { key: "id", label: "Nomor", mono: true },
-        { key: "deskripsi", label: "Deskripsi" },
-        { key: "pemohon", label: "Pemohon" },
-        { key: "tanggal", label: "Tanggal" },
-        { key: "total", label: "Nominal", align: "right", mono: true },
+        { key: "number_fs", label: "Nomor FS", mono: true },
+        { key: "requester_name", label: "Pemohon" },
+        { key: "fr_id", label: "FR ID", mono: true },
+        { key: "requester_date_time", label: "Tanggal Request", type: "datetime" },
+        { key: "balance", label: "Balance", align: "right", mono: true, defaultValue: "-" },
+        { key: "status", label: "Status" },
       ]}
       rows={rows}
+      loading={loading}
+      error={error}
     />
   );
 }

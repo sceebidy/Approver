@@ -15,7 +15,7 @@ class KategoriFr extends Model
         'nama',
         'min_app',
         'seksi_id',
-        'max_ammount'
+        'max_amount'
     ];
 
     public function approverKategoriFr()

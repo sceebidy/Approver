@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { refreshCsrfCookie } from '@/lib/csrf';
 
 export default function SSOVerifyPage() {
   const router = useRouter();
@@ -24,19 +25,10 @@ export default function SSOVerifyPage() {
       try {
         const appId = process.env.NEXT_PUBLIC_APP_ID;
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const baseUrl = apiUrl.replace(/\/api\/?$/, '');
 
-        // 1. Get CSRF Token and initialize session
-        const csrfRes = await fetch(`${apiUrl}/auth/csrf`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-          credentials: 'include' 
-        });
-        
-        let csrfToken = '';
-        if (csrfRes.ok) {
-           const csrfData = await csrfRes.json();
-           csrfToken = csrfData.data?.csrfToken || '';
-        }
+        // 1. Get CSRF cookie and initialize session
+        const xsrfToken = await refreshCsrfCookie();
 
         // 2. Exchange token for session
         const response = await fetch(`${apiUrl}/auth/login`, {
@@ -44,7 +36,7 @@ export default function SSOVerifyPage() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'X-CSRF-TOKEN': csrfToken,
+            'X-XSRF-TOKEN': xsrfToken,
           },
           credentials: 'include', // Ensure browser saves the HttpOnly session cookie
           body: JSON.stringify({

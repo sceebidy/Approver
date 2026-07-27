@@ -1,8 +1,11 @@
-import DocumentListPage from "@/components/DocumentListPage";
+"use client";
 
-const rows: any[] = [];
+import DocumentListPage from "@/components/DocumentListPage";
+import { useDocumentList } from "@/lib/useDocumentList";
 
 export default function FrListPage() {
+  const { rows, loading, error } = useDocumentList("fr");
+
   return (
     <DocumentListPage
       title="Fund Request"
@@ -10,13 +13,16 @@ export default function FrListPage() {
       createLabel="Buat FR"
       createHref="/upload"
       columns={[
-        { key: "id", label: "Nomor", mono: true },
-        { key: "deskripsi", label: "Deskripsi" },
-        { key: "pemohon", label: "Pemohon" },
-        { key: "tanggal", label: "Tanggal" },
-        { key: "total", label: "Nominal", align: "right", mono: true },
+        { key: "number_fr", label: "Nomor FR", mono: true },
+        { key: "requester_name", label: "Pemohon" },
+        { key: "kategori_fr_name", label: "Kategori" },
+        { key: "request_date_time", label: "Tanggal Request", type: "datetime" },
+        { key: "status", label: "Status" },
+        { key: "keterangan", label: "Keterangan", defaultValue: "-" },
       ]}
       rows={rows}
+      loading={loading}
+      error={error}
     />
   );
 }
