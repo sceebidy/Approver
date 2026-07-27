@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
+import StatusBadge from "./StatusBadge";
 
 export default function PendingApprovalsList() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -67,7 +68,7 @@ export default function PendingApprovalsList() {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-sm text-[#111827] uppercase">{item.type}</span>
-              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">{item.status}</span>
+              <StatusBadge status={item.status} />
             </div>
             <p className="text-sm font-medium text-[#374151] mt-1">{item.number}</p>
             <p className="text-xs text-[#6B7280]">{item.description}</p>

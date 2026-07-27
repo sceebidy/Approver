@@ -180,7 +180,7 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                         {c.type === 'badge' ? (
                           <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap ${
                             r[c.key] === 'Pengajuan Saya' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 
-                            r[c.key] === 'Perlu Persetujuan' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                            r[c.key] === 'Butuh Approval Anda' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                             'bg-gray-50 text-gray-700 border border-gray-200'
                           }`}>
                             {r[c.key] || c.defaultValue || '-'}

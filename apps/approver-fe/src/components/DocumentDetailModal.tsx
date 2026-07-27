@@ -130,7 +130,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white border border-[#E3E6EA] rounded-lg p-4 space-y-3 shadow-sm">
                   <h4 className="text-[13px] font-semibold text-[#374151] flex items-center gap-2 mb-3 border-b pb-2">
-                    <FileText size={16} className="text-[#9CA3AF]"/>
+                    <FileText size={16} className="text-[#9CA3AF]" />
                     Informasi Dokumen
                   </h4>
                   <div className="grid grid-cols-[110px_1fr] gap-x-2 gap-y-2.5 text-[13px]">
@@ -139,7 +139,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                       <User size={14} className="text-slate-400" />
                       {data.user?.name || data.user_name || '-'}
                     </span>
-                    
+
                     <span className="text-[#6B7280]">Dibuat Pada</span>
                     <span className="font-medium text-[#111827] flex items-center gap-1.5">
                       <Calendar size={14} className="text-slate-400" />
@@ -148,11 +148,10 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
 
                     <span className="text-[#6B7280]">Tipe Request</span>
                     <span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                        data.request_type === 'Pengajuan Saya' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 
-                        data.request_type === 'Perlu Persetujuan' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                        'bg-gray-50 text-gray-700 border border-gray-200'
-                      }`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${data.request_type === 'Pengajuan Saya' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                          data.request_type === 'Butuh Approval Anda' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                            'bg-gray-50 text-gray-700 border border-gray-200'
+                        }`}>
                         {data.request_type}
                       </span>
                     </span>
@@ -161,7 +160,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
 
                 <div className="bg-white border border-[#E3E6EA] rounded-lg p-4 space-y-3 shadow-sm">
                   <h4 className="text-[13px] font-semibold text-[#374151] flex items-center gap-2 mb-3 border-b pb-2">
-                    <Tag size={16} className="text-[#9CA3AF]"/>
+                    <Tag size={16} className="text-[#9CA3AF]" />
                     Rincian Spesifik
                   </h4>
                   <div className="grid grid-cols-[110px_1fr] gap-x-2 gap-y-2.5 text-[13px]">
@@ -283,7 +282,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                         const isApproved = line.status === 'approved';
                         const isRejected = line.status === 'rejected';
                         const isPending = line.status === 'pending';
-                        
+
                         return (
                           <div key={idx} className="relative pl-6">
                             <span className="absolute -left-[9px] top-1 bg-white">
@@ -305,11 +304,10 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                                 </p>
                               </div>
                               <div className="flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
-                                <span className={`inline-flex px-2 py-0.5 text-[11px] font-semibold rounded-full ${
-                                  isApproved ? 'bg-emerald-50 text-emerald-700' :
-                                  isRejected ? 'bg-red-50 text-red-700' :
-                                  'bg-amber-50 text-amber-700'
-                                }`}>
+                                <span className={`inline-flex px-2 py-0.5 text-[11px] font-semibold rounded-full ${isApproved ? 'bg-emerald-50 text-emerald-700' :
+                                    isRejected ? 'bg-red-50 text-red-700' :
+                                      'bg-amber-50 text-amber-700'
+                                  }`}>
                                   {line.status.charAt(0).toUpperCase() + line.status.slice(1)}
                                 </span>
                                 {line.timestamp && (

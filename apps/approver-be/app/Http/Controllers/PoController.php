@@ -32,7 +32,7 @@ class PoController extends Controller
                 'created_at'  => $p->created_at,
                 'status'      => 'pending',
                 'can_cancel'  => !$p->approverLines->contains('status', 'approved'),
-                'request_type'=> $p->user_id === $user->id ? 'Pengajuan Saya' : ($p->approverLines->contains('approver_id', $user->id) ? 'Perlu Persetujuan' : 'Lainnya'),
+                'request_type'=> $p->user_id === $user->id ? 'Pengajuan Saya' : ($p->approverLines->contains('approver_id', $user->id) ? 'Butuh Approval Anda' : 'Lainnya'),
             ]);
 
         return response()->json(['success' => true, 'data' => $items]);
@@ -130,7 +130,7 @@ class PoController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
         }
 
-        $po->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Perlu Persetujuan' : 'Lainnya');
+        $po->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $po->can_cancel = !$po->approverLines->contains('status', 'approved');
 
         return response()->json([

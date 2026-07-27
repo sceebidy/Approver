@@ -492,7 +492,7 @@ function EditableValue({
       <SsoUserPicker
         value={value}
         onChange={onChange}
-        placeholder={`Pilih ${formatApproverFieldLabel(fieldKey)}`}
+        placeholder={`Pilih ${formatApproverFieldLabel(fieldKey || "")}`}
       />
     );
   }
