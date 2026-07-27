@@ -45,6 +45,7 @@ export default function MisListPage() {
         }
         columns={[
           { key: "nomor_mis", label: "Nomor MIS", mono: true },
+          { key: "request_type", label: "Tipe", type: "badge" },
           { key: "tgl_mis", label: "Tanggal MIS", type: "date" },
           { key: "user_name", label: "Pemohon" },
           { key: "created_at", label: "Dibuat", type: "datetime" },

@@ -45,6 +45,7 @@ export default function PoListPage() {
         }
         columns={[
           { key: "nomor_po", label: "Nomor PO", mono: true },
+          { key: "request_type", label: "Tipe", type: "badge" },
           { key: "nomor_ppab", label: "Nomor PPAB", defaultValue: "-" },
           { key: "vendor", label: "Vendor" },
           { key: "user_name", label: "Pemohon" },

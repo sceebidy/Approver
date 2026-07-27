@@ -11,6 +11,7 @@ class MisController extends Controller
 {
     public function index()
     {
+        $userId = auth()->id();
         $items = \App\Models\Mis::with(['user:id,name', 'approverLines'])
             ->latest()
             ->get()
@@ -23,6 +24,7 @@ class MisController extends Controller
                 'created_at' => $m->created_at,
                 'status'     => 'pending',
                 'can_cancel' => !$m->approverLines->contains('status', 'approved'),
+                'request_type'=> $m->user_id === $userId ? 'Pengajuan Saya' : ($m->approverLines->contains('approver_id', $userId) ? 'Perlu Persetujuan' : 'Lainnya'),
             ]);
 
         return response()->json(['success' => true, 'data' => $items]);

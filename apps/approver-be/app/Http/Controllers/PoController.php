@@ -10,6 +10,7 @@ class PoController extends Controller
 {
     public function index()
     {
+        $userId = auth()->id();
         $items = \App\Models\Po::with(['user:id,name', 'approverLines'])
             ->latest()
             ->get()
@@ -23,6 +24,7 @@ class PoController extends Controller
                 'created_at'  => $p->created_at,
                 'status'      => 'pending',
                 'can_cancel'  => !$p->approverLines->contains('status', 'approved'),
+                'request_type'=> $p->user_id === $userId ? 'Pengajuan Saya' : ($p->approverLines->contains('approver_id', $userId) ? 'Perlu Persetujuan' : 'Lainnya'),
             ]);
 
         return response()->json(['success' => true, 'data' => $items]);

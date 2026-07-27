@@ -10,7 +10,7 @@ export interface DocColumn {
   label: string;
   align?: "left" | "right";
   mono?: boolean;
-  type?: "date" | "datetime" | "text";
+  type?: "date" | "datetime" | "text" | "badge";
   defaultValue?: string;
 }
 
@@ -171,7 +171,17 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                           c.mono ? "font-mono text-[12.5px]" : ""
                         } text-[#111827]`}
                       >
-                        {cellValue(r, c)}
+                        {c.type === 'badge' ? (
+                          <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap ${
+                            r[c.key] === 'Pengajuan Saya' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 
+                            r[c.key] === 'Perlu Persetujuan' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                            'bg-gray-50 text-gray-700 border border-gray-200'
+                          }`}>
+                            {r[c.key] || c.defaultValue || '-'}
+                          </span>
+                        ) : (
+                          cellValue(r, c)
+                        )}
                       </td>
                     ))}
                     <td className="px-4 py-3"><StatusBadge status={r.status ?? 'pending'} /></td>

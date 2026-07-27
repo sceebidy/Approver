@@ -45,6 +45,7 @@ export default function PpabListPage() {
         }
         columns={[
           { key: "nomor_ppab", label: "Nomor PPAB", mono: true },
+          { key: "request_type", label: "Tipe", type: "badge" },
           { key: "deskripsi", label: "Deskripsi" },
           { key: "user_name", label: "Pemohon" },
           { key: "created_at", label: "Tanggal", type: "datetime" },
