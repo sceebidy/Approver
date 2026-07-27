@@ -1,27 +1,132 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { X, UploadCloud } from "lucide-react";
+import { X, UploadCloud, Loader2, AlertCircle } from "lucide-react";
 import SsoUserPicker from "@/components/SsoUserPicker";
 import {
   collectApproversFromData,
   formatApproverFieldLabel,
   isApproverFieldKey,
 } from "@/lib/employees";
+import { refreshCsrfCookie } from "@/lib/csrf";
+
+/**
+ * Menormalisasi payload hasil ekstraksi PDF ke format yang diharapkan backend.
+ * Setiap docType memiliki mapping field yang berbeda antara extractor dan controller.
+ */
+function buildPayload(docType: 'ppab' | 'po' | 'mis', raw: any): any {
+  if (docType === 'mis') {
+    // Extractor output: { nomor_mis, tgl_mis, items: [{no, desc, satuan, qty (string)}], approval, ... }
+    // Backend expects: { nomor_mis (required string), tgl_mis (required string dd/mm/YYYY or Y-m-d),
+    //                    items: [{desc (required), satuan (required), qty (required numeric), remark (nullable)}] }
+    const items = Array.isArray(raw.items)
+      ? raw.items.map((item: any) => ({
+          desc: item.desc ?? '',
+          satuan: item.satuan ?? '',
+          // qty bisa berupa string "1.000" dari extractor — coerce ke number
+          qty: parseFloat(String(item.qty ?? '0').replace(/\./g, '').replace(',', '.')) || 0,
+          remark: item.remark ?? null,
+        }))
+      : [];
+
+    return {
+      nomor_mis: raw.nomor_mis ?? '',
+      tgl_mis: raw.tgl_mis ?? '',
+      items,
+      // approver_lines tidak di-include dari hasil ekstraksi (nullable di backend)
+    };
+  }
+
+  if (docType === 'ppab') {
+    // Extractor output: { nomor_ppab, kebun_unit, rencana_selesai, sumber_anggaran,
+    //                     items: [{no, deskripsi, satuan, qty, harga_satuan, jumlah}],
+    //                     jumlah_excl_ppn, ppn_11_persen, jumlah_incl_ppn, approval_roles }
+    // Backend expects: { nomor_ppab (required), deskripsi (required — tidak ada di extractor, pakai sumber_anggaran atau placeholder),
+    //                    items: [{deskripsi (required), satuan (required), qty (required numeric),
+    //                             harga_satuan (required numeric), kategori (nullable), currency (nullable)}] }
+    const items = Array.isArray(raw.items)
+      ? raw.items.map((item: any) => ({
+          deskripsi: item.deskripsi ?? '',
+          satuan: item.satuan ?? '',
+          qty: Number(item.qty ?? 0),
+          harga_satuan: Number(item.harga_satuan ?? 0),
+          kategori: item.kategori ?? null,
+          currency: item.currency ?? 'IDR',
+        }))
+      : [];
+
+    // Deskripsi PPAB tidak ada di extractor — gunakan sumber_anggaran jika ada,
+    // atau kebun_unit, atau string kosong (user bisa edit di UI sebelum submit)
+    const deskripsi = raw.deskripsi
+      ?? raw.sumber_anggaran
+      ?? raw.kebun_unit
+      ?? '';
+
+    return {
+      nomor_ppab: raw.nomor_ppab ?? '',
+      deskripsi,
+      items,
+    };
+  }
+
+  if (docType === 'po') {
+    // Extractor output: { nomor_po, nomor_ppab (nullable), vendor: {nama, alamat},
+    //                     items: [{no, deskripsi, satuan, qty, harga_satuan, amount}],
+    //                     subtotal, ppn_11_persen, grand_total, approval_roles }
+    // Backend expects: { nomor_po (required string), vendor (required string — bukan object!),
+    //                    nomor_ppab (nullable string),
+    //                    items: [{deskripsi (required), satuan (required), qty (required numeric),
+    //                             harga_satuan (required numeric), spec (nullable)}] }
+    // Tangani 2 varian PO:
+    // - PURCHASE_ORDER: vendor = { nama, alamat }
+    // - PURCHASE_ORDER_V2: vendor_nama = string langsung
+    const vendorRaw = raw.vendor;
+    const vendor: string = typeof vendorRaw === 'string'
+      ? vendorRaw
+      : (vendorRaw?.nama ?? raw.vendor_nama ?? '');
+
+    const items = Array.isArray(raw.items)
+      ? raw.items.map((item: any) => ({
+          deskripsi: item.deskripsi ?? '',
+          satuan: item.satuan ?? '',
+          qty: Number(item.qty ?? 0),
+          harga_satuan: Number(item.harga_satuan ?? 0),
+          spec: item.spec ?? null,
+        }))
+      : [];
+
+    return {
+      nomor_po: raw.nomor_po ?? '',
+      vendor,
+      nomor_ppab: raw.nomor_ppab ?? null,
+      items,
+    };
+  }
+
+  // Fallback: kirim raw as-is
+  return raw;
+}
 
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  docType?: 'ppab' | 'po' | 'mis';
+  /** Dipanggil setelah simpan berhasil — gunakan untuk refresh list di parent */
+  onSaved?: () => void;
 }
 
-export default function UploadModal({ isOpen, onClose, title = "Upload PDF" }: UploadModalProps) {
+export default function UploadModal({ isOpen, onClose, title = "Upload PDF", docType, onSaved }: UploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]> | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [editableResult, setEditableResult] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const unsupportedFieldKeys = new Set(['required_for', 'time', 'section']);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -35,10 +140,14 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF" }: U
     if (isOpen) {
       setFile(null);
       setStatus(null);
+      setErrorMessage(null);
+      setValidationErrors(null);
+      setSuccessMessage(null);
       setResult(null);
       setEditableResult(null);
       setUploading(false);
       setSubmitting(false);
+      setValidationErrors(null);
     }
   }, [isOpen]);
 
@@ -57,33 +166,45 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF" }: U
     setUploading(true);
 
     try {
-      const res = await fetch("/api/extract-document", {
-        method: "POST",
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+      const res = await fetch(`${apiUrl}/extract-document`, {
+        method: 'POST',
         body: formData,
+        credentials: 'include',
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(`Response bukan JSON saat ekstraksi: ${res.status} ${res.statusText}`);
+      }
 
       if (!res.ok) {
         setStatus(`Gagal: ${data.message || res.statusText}`);
+        setErrorMessage(data.message || `Ekstraksi gagal (${res.status}).`);
         setUploading(false);
         return;
       }
 
-      setStatus("Sukses: Dokumen berhasil diekstrak.");
+      setStatus('Sukses: Dokumen berhasil diekstrak.');
+      setErrorMessage(null);
+      setSuccessMessage('Dokumen berhasil diekstrak.');
       const extracted = data?.data ?? data;
       setResult(extracted);
       setEditableResult(extracted);
     } catch (error) {
       setStatus(`Error koneksi: ${String(error)}`);
+      setErrorMessage(`Error koneksi: ${String(error)}`);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleSimpanPengajuan = async () => {
+  const handleSave = async () => {
     if (!editableResult) {
-      setStatus("Tidak ada data untuk disimpan.");
+      setStatus('Tidak ada data untuk disimpan.');
       return;
     }
 
@@ -93,34 +214,70 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF" }: U
       return;
     }
 
-    setSubmitting(true);
-    setStatus("Menyimpan pengajuan...");
+    let type = docType;
+    if (!type) {
+      if (editableResult.nomor_ppab || editableResult.nomorPpab) type = "ppab";
+      else if (editableResult.nomor_po || editableResult.nomorPo) type = "po";
+      else type = "mis";
+    }
 
-    let type = "mis";
-    if (editableResult.nomor_ppab || editableResult.nomorPpab) type = "ppab";
-    else if (editableResult.nomor_po || editableResult.nomorPo) type = "po";
+    setSubmitting(true);
+    setStatus('Menyimpan pengajuan...');
+    setErrorMessage(null);
+    setValidationErrors(null);
 
     try {
-      const res = await fetch("/api/submissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      // Transformasi data hasil ekstraksi ke format yang diharapkan backend
+      const payload = buildPayload(type, editableResult);
+
+      // Pastikan XSRF-TOKEN cookie selalu fresh sebelum POST (Sanctum stateful)
+      const xsrfToken = await refreshCsrfCookie();
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+      const res = await fetch(`${apiUrl}/submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-XSRF-TOKEN': xsrfToken,
+        },
+        credentials: 'include',
         body: JSON.stringify({
           type,
-          data: editableResult,
+          data: payload,
           approvers,
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        setStatus(`Gagal menyimpan: ${data.message || res.statusText}`);
-      } else {
-        setStatus("Sukses: Pengajuan berhasil disimpan.");
-        setTimeout(() => onClose(), 2000);
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(`Response bukan JSON saat simpan: ${res.status} ${res.statusText}`);
       }
+
+      if (!res.ok) {
+        const message = data.message || data.error || 'Gagal menyimpan pengajuan.';
+        // Tampilkan validasi errors per-field dari Laravel (422)
+        if (data.errors && typeof data.errors === 'object') {
+          setValidationErrors(data.errors);
+        }
+        setStatus(`Gagal: ${message}`);
+        setErrorMessage(message);
+        return;
+      }
+
+      setStatus('Sukses: Pengajuan berhasil disimpan.');
+      setErrorMessage(null);
+      setSuccessMessage('Pengajuan berhasil disimpan.');
+      setTimeout(() => {
+        onSaved?.();
+        onClose();
+      }, 2000);
     } catch (error) {
       setStatus(`Error koneksi: ${String(error)}`);
+      setErrorMessage(`Error koneksi: ${String(error)}`);
     } finally {
       setSubmitting(false);
     }
@@ -172,6 +329,34 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF" }: U
               </div>
             </form>
 
+            {errorMessage ? (
+              <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                <div className="flex items-center gap-1.5 font-semibold mb-1">
+                  <AlertCircle size={14} />
+                  Terjadi kesalahan
+                </div>
+                <div>{errorMessage}</div>
+                {validationErrors && (
+                  <ul className="mt-2 space-y-0.5 list-disc list-inside text-red-600">
+                    {Object.entries(validationErrors).map(([field, messages]) =>
+                      (messages as string[]).map((msg, i) => (
+                        <li key={`${field}-${i}`}>
+                          <span className="font-medium">{field}:</span> {msg}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
+              </div>
+            ) : null}
+
+            {successMessage ? (
+              <div className="mb-4 rounded-md bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-700">
+                <div className="font-semibold">Berhasil</div>
+                <div>{successMessage}</div>
+              </div>
+            ) : null}
+
             {status ? <p className="mt-4 text-sm text-slate-600">{status}</p> : null}
 
             {result ? (
@@ -180,27 +365,34 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF" }: U
                 <p className="mb-3 text-xs text-[#6B7280]">
                   Klik field approver (mis. Accepted By) untuk mencari dan memilih user dari SSO.
                 </p>
-                <EditableResultView value={editableResult} onChange={setEditableResult} />
+                <EditableResultView value={editableResult} onChange={setEditableResult} unsupportedKeys={unsupportedFieldKeys} />
               </div>
             ) : null}
           </div>
 
           <div className="sticky bottom-0 border-t border-[#E3E6EA] bg-white px-4 py-3">
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleSimpanPengajuan}
-                disabled={!result || submitting}
-                className="rounded-md bg-[#10B981] px-3 py-2 text-white disabled:opacity-60"
-              >
-                {submitting ? "Menyimpan..." : "Simpan sebagai Pengajuan"}
-              </button>
+            <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-md border border-[#E3E6EA] px-3 py-2 hover:bg-[#F1F3F6]"
+                className="rounded-md border border-[#D1D5DB] px-3 py-2 text-sm font-medium text-[#1F3A5F] hover:bg-[#F1F3F6]"
               >
-                Tutup
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!editableResult || submitting}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-slate-200 transition hover:bg-[#059669] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  'Simpan sebagai Pengajuan'
+                )}
               </button>
             </div>
           </div>
@@ -210,7 +402,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF" }: U
   );
 }
 
-function EditableResultView({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+function EditableResultView({ value, onChange, unsupportedKeys }: { value: any; onChange: (v: any) => void; unsupportedKeys: Set<string> }) {
   const [local, setLocal] = useState<any>(value ?? null);
 
   useEffect(() => setLocal(value ?? null), [value]);
@@ -221,24 +413,34 @@ function EditableResultView({ value, onChange }: { value: any; onChange: (v: any
 
   return (
     <div className="space-y-3">
-      {Object.keys(local).map((key) => (
-        <div key={key} className="flex gap-3">
-          <div className="w-44 shrink-0 text-[13px] text-[#6B7280]">
-            {key === "approval_roles" ? "Approval Roles" : formatApproverFieldLabel(key)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <EditableValue
-              fieldKey={key}
-              value={local[key]}
-              onChange={(nextValue) => {
-                const next = { ...local, [key]: nextValue };
-                setLocal(next);
-                onChange(next);
-              }}
-            />
-          </div>
-        </div>
-      ))}
+      {local && typeof local === 'object' ? (
+        Object.keys(local).map((k) => {
+          const isUnsupported = unsupportedKeys.has(k);
+          return (
+            <div key={k} className="flex gap-3 items-start">
+              <div className="w-44 shrink-0 text-[13px] text-[#6B7280]">
+                {k === "approval_roles" ? "Approval Roles" : formatApproverFieldLabel(k)}
+                {isUnsupported ? (
+                  <div className="text-[11px] text-[#9CA3AF]">tidak akan disimpan</div>
+                ) : null}
+              </div>
+              <div className={`min-w-0 flex-1 ${isUnsupported ? 'opacity-70' : ''}`}>
+                <EditableValue
+                  fieldKey={k}
+                  value={local[k]}
+                  onChange={(nv) => {
+                    const next = { ...local, [k]: nv };
+                    setLocal(next);
+                    onChange(next);
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <div className="text-sm text-[#111827]">{String(local)}</div>
+      )}
     </div>
   );
 }

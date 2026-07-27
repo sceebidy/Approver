@@ -18,16 +18,20 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExtractionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PortalController;
+use App\Http\Controllers\PpabController;
+use App\Http\Controllers\PoController;
+use App\Http\Controllers\MisController;
+use App\Http\Controllers\FrController;
+use App\Http\Controllers\FsController;
 
 // Public Routes
-Route::get('/auth/csrf', [AuthController::class, 'csrf']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 
 // Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-    
+
     // Portal API proxy routes
     Route::get('/portal/employees', [PortalController::class, 'employees']);
     Route::get('/portal/grades', [PortalController::class, 'grades']);
@@ -40,8 +44,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/submissions/{type}/{lineId}/approve', [\App\Http\Controllers\SubmissionController::class, 'approve']);
     Route::post('/submissions/{type}/{lineId}/reject', [\App\Http\Controllers\SubmissionController::class, 'reject']);
 
+    // PPAB
+    Route::get('/ppab',  [PpabController::class, 'index']);
+    Route::post('/ppab', [PpabController::class, 'store']);
+
+    // PO
+    Route::get('/po',  [PoController::class, 'index']);
+    Route::post('/po', [PoController::class, 'store']);
+
+    // MIS
+    Route::get('/mis',  [MisController::class, 'index']);
+    Route::post('/mis', [MisController::class, 'store']);
+
+    // FR (read-only untuk saat ini)
+    Route::get('/fr', [FrController::class, 'index']);
+
+    // FS (read-only untuk saat ini)
+    Route::get('/fs', [FsController::class, 'index']);
 });
 
-// Existing routes (might need auth later, but keep as is for now)
+// Existing public routes
 Route::post('/process-document', [DocumentController::class, 'process']);
 Route::post('/extract-document', [ExtractionController::class, 'extract']);
+

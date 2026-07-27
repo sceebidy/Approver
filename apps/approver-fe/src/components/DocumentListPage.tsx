@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Plus, ChevronDown } from "lucide-react";
+import { Search, Plus, ChevronDown, Loader2, AlertCircle } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 export interface DocColumn {
@@ -10,12 +10,14 @@ export interface DocColumn {
   label: string;
   align?: "left" | "right";
   mono?: boolean;
+  type?: "date" | "datetime" | "text";
+  defaultValue?: string;
 }
 
 export interface DocRow {
-  id: string;
-  status: string;
-  [key: string]: string;
+  id: string | number;
+  status?: string;
+  [key: string]: any;
 }
 
 interface Props {
@@ -26,6 +28,8 @@ interface Props {
   createNode?: React.ReactNode;
   columns: DocColumn[];
   rows: DocRow[];
+  loading?: boolean;
+  error?: string | null;
 }
 
 const tabs = [
@@ -35,9 +39,26 @@ const tabs = [
   { key: "rejected", label: "Ditolak" },
 ];
 
-export default function DocumentListPage({ title, subtitle, createLabel, createHref, createNode, columns, rows }: Props) {
+export default function DocumentListPage({ title, subtitle, createLabel, createHref, createNode, columns, rows, loading, error }: Props) {
   const [activeTab, setActiveTab] = useState("all");
   const filtered = activeTab === "all" ? rows : rows.filter((r) => r.status === activeTab);
+
+  /** Format nilai sel berdasarkan type kolom */
+  function cellValue(row: DocRow, col: DocColumn): string {
+    const raw = row[col.key];
+    if (raw === null || raw === undefined || raw === '') {
+      return col.defaultValue ?? '-';
+    }
+    if (col.type === 'datetime') {
+      try { return new Date(raw).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+      catch { return String(raw); }
+    }
+    if (col.type === 'date') {
+      try { return new Date(raw).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
+      catch { return String(raw); }
+    }
+    return String(raw);
+  }
 
   return (
     <main className="p-6 space-y-4 max-w-6xl">
@@ -89,7 +110,18 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
           </div>
         </div>
 
-        {rows.length === 0 ? (
+        {/* Loading state */}
+        {loading ? (
+          <div className="px-6 py-12 flex flex-col items-center justify-center gap-3 text-sm text-[#6B7280]">
+            <Loader2 size={22} className="animate-spin text-[#1F3A5F]" />
+            <span>Memuat data...</span>
+          </div>
+        ) : error ? (
+          <div className="px-6 py-10 flex flex-col items-center justify-center gap-2 text-sm text-red-600">
+            <AlertCircle size={20} />
+            <span>Gagal memuat data: {error}</span>
+          </div>
+        ) : rows.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-[#6B7280]">
             Belum ada data.
           </div>
@@ -112,14 +144,16 @@ export default function DocumentListPage({ title, subtitle, createLabel, createH
                     {columns.map((c) => (
                       <td
                         key={c.key}
-                        className={`px-4 py-3 ${c.align === "right" ? "text-right" : ""} ${
+                        className={`px-4 py-3 ${
+                          c.align === "right" ? "text-right" : ""
+                        } ${
                           c.mono ? "font-mono text-[12.5px]" : ""
-                        } ${c.key === "id" ? "text-[#4B5563] text-[12px]" : "text-[#111827]"}`}
+                        } text-[#111827]`}
                       >
-                        {r[c.key]}
+                        {cellValue(r, c)}
                       </td>
                     ))}
-                    <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={r.status ?? 'pending'} /></td>
                   </tr>
                 ))}
               </tbody>

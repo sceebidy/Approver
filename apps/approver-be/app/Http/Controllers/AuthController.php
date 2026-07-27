@@ -122,16 +122,4 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Provide CSRF Token
-     */
-    public function csrf()
-    {
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'csrfToken' => csrf_token()
-            ]
-        ]);
-    }
 }
