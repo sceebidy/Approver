@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { X, UploadCloud, Loader2, AlertCircle } from "lucide-react";
+import { X, UploadCloud, Loader2, AlertCircle, FileText, CheckCircle2, FileUp } from "lucide-react";
 import SsoUserPicker from "@/components/SsoUserPicker";
 import {
   collectApproversFromData,
@@ -9,6 +9,32 @@ import {
   isApproverFieldKey,
 } from "@/lib/employees";
 import { refreshCsrfCookie } from "@/lib/csrf";
+
+/**
+ * Cek apakah field merepresentasikan nominal uang agar bisa diformat.
+ */
+function isMoneyField(key?: string) {
+  if (!key) return false;
+  const k = key.toLowerCase();
+  return k.includes('harga') || k.includes('jumlah') || k.includes('amount') || k.includes('total') || k.includes('ppn') || k.includes('subtotal') || k.includes('nominal');
+}
+
+/**
+ * Format angka ke format uang dengan pemisah ribuan (titik).
+ */
+function formatMoney(value: any) {
+  if (value === null || value === undefined || value === '') return '';
+  const num = typeof value === 'string' ? Number(value.replace(/[^0-9.-]+/g, "")) : Number(value);
+  if (isNaN(num)) return value;
+  return new Intl.NumberFormat('id-ID').format(num);
+}
+
+/**
+ * Parsing kembali dari string berformat uang ke string angka agar mudah disimpan/dihitung.
+ */
+function parseMoney(value: string) {
+  return value.replace(/[^0-9]/g, '');
+}
 
 /**
  * Menormalisasi payload hasil ekstraksi PDF ke format yang diharapkan backend.
@@ -295,116 +321,154 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" aria-modal role="dialog">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" aria-modal role="dialog">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-      <div className="relative z-10 mx-4 w-full max-w-2xl">
-        <div className="flex max-h-[85vh] flex-col rounded-lg bg-white shadow-lg">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E3E6EA] bg-white px-4 py-3">
-            <h3 className="text-sm font-semibold">{title}</h3>
-            <button onClick={onClose} aria-label="Close" className="p-1 text-slate-600 hover:text-slate-900">
-              <X size={18} />
-            </button>
+      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-[#E3E6EA] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between border-b border-[#E3E6EA] px-6 py-4 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+            <p className="text-sm text-slate-500 mt-0.5">Unggah dokumen untuk diekstrak secara otomatis.</p>
           </div>
+          <button onClick={onClose} aria-label="Close" className="rounded-full p-2 text-slate-400 hover:bg-[#F8F9FB] hover:text-slate-600 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
 
-          <div className="overflow-y-auto p-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">Pilih file PDF</label>
+        <div className="flex-1 overflow-y-auto p-6 bg-[#F8F9FB]/50">
+          <form onSubmit={handleSubmit} className="mb-6">
+            <div className="relative group mb-4">
+              <label className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${file ? 'border-[#1F3A5F] bg-[#F8F9FB] shadow-inner' : 'border-[#E3E6EA] bg-white hover:bg-[#F8F9FB] hover:border-[#1F3A5F]/50 shadow-sm'}`}>
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  {file ? (
+                    <div className="bg-[#1F3A5F]/10 p-3 rounded-full mb-3 text-[#1F3A5F] shadow-sm">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                  ) : (
+                    <div className="bg-[#F8F9FB] border border-[#E3E6EA] group-hover:bg-[#1F3A5F]/5 p-3 rounded-full mb-3 text-slate-400 group-hover:text-[#1F3A5F] transition-colors">
+                      <FileUp className="w-6 h-6" />
+                    </div>
+                  )}
+                  <p className="mb-1 text-sm text-slate-600 text-center px-4">
+                    {file ? (
+                      <span className="font-semibold text-[#1F3A5F] block truncate max-w-xs">{file.name}</span>
+                    ) : (
+                      <><span className="font-semibold text-[#1F3A5F]">Klik untuk upload</span> atau drag and drop PDF ke sini</>
+                    )}
+                  </p>
+                  <p className="text-xs text-slate-400">Format PDF (Max. 10MB)</p>
+                </div>
                 <input
                   type="file"
                   accept="application/pdf"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className="block w-full rounded-md border border-[#E3E6EA] p-2"
+                  className="hidden"
                 />
-              </div>
+              </label>
+            </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="inline-flex items-center gap-2 rounded-md bg-[#1F3A5F] px-4 py-2 text-white hover:bg-[#1a3350] disabled:opacity-60"
-                >
-                  <UploadCloud size={16} />
-                  Upload dan Ekstrak
-                </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={uploading || !file}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#1F3A5F] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#1a3350] hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploading ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
+                {uploading ? 'Memproses Dokumen...' : 'Upload & Ekstrak'}
+              </button>
+              {file && !uploading && (
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="rounded-md border border-[#E3E6EA] px-3 py-2 hover:bg-[#F1F3F6]"
+                  onClick={() => { setFile(null); setStatus(null); setErrorMessage(null); setResult(null); setEditableResult(null); }}
+                  className="rounded-lg border border-[#E3E6EA] bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-[#F8F9FB] hover:text-slate-900"
                 >
-                  Batal
+                  Reset
                 </button>
-              </div>
-            </form>
+              )}
+            </div>
+          </form>
 
-            {errorMessage ? (
-              <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                <div className="flex items-center gap-1.5 font-semibold mb-1">
-                  <AlertCircle size={14} />
-                  Terjadi kesalahan
+          {errorMessage ? (
+            <div className="mb-6 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-800 shadow-sm animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2 font-bold mb-1.5 text-red-700">
+                <AlertCircle size={16} />
+                Terjadi Kesalahan
+              </div>
+              <div className="pl-6">{errorMessage}</div>
+              {validationErrors && (
+                <ul className="mt-3 space-y-1 pl-6 list-disc list-outside text-red-600 font-medium">
+                  {Object.entries(validationErrors).map(([field, messages]) =>
+                    (messages as string[]).map((msg, i) => (
+                      <li key={`${field}-${i}`}>
+                        <span className="capitalize">{field.replace(/_/g, ' ')}:</span> {msg}
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </div>
+          ) : null}
+
+          {successMessage ? (
+            <div className="mb-6 rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800 shadow-sm animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2 font-bold mb-1 text-emerald-700">
+                <CheckCircle2 size={16} />
+                Berhasil
+              </div>
+              <div className="pl-6">{successMessage}</div>
+            </div>
+          ) : null}
+
+          {status && !errorMessage && !successMessage && (
+            <div className="mb-6 rounded-lg bg-blue-50/50 border border-blue-100 p-3 text-sm text-blue-700 animate-in fade-in flex items-center gap-2">
+              {uploading || submitting ? <Loader2 size={14} className="animate-spin text-blue-500" /> : <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+              {status}
+            </div>
+          )}
+
+          {result ? (
+            <div className="rounded-xl border border-[#E3E6EA] bg-white shadow-sm ring-1 ring-slate-900/5 animate-in fade-in slide-in-from-bottom-4">
+              <div className="border-b border-[#E3E6EA] bg-[#F8F9FB] px-6 py-4 rounded-t-xl flex items-start sm:items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#1F3A5F] shadow-sm border border-[#E3E6EA]">
+                  <FileText size={20} />
                 </div>
-                <div>{errorMessage}</div>
-                {validationErrors && (
-                  <ul className="mt-2 space-y-0.5 list-disc list-inside text-red-600">
-                    {Object.entries(validationErrors).map(([field, messages]) =>
-                      (messages as string[]).map((msg, i) => (
-                        <li key={`${field}-${i}`}>
-                          <span className="font-medium">{field}:</span> {msg}
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                )}
+                <div>
+                  <h4 className="font-bold text-slate-900 text-base">Hasil Ekstraksi Data</h4>
+                  <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                    Mohon periksa kembali data di bawah. Klik field approver untuk memilih user dari SSO.
+                  </p>
+                </div>
               </div>
-            ) : null}
-
-            {successMessage ? (
-              <div className="mb-4 rounded-md bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-700">
-                <div className="font-semibold">Berhasil</div>
-                <div>{successMessage}</div>
-              </div>
-            ) : null}
-
-            {status ? <p className="mt-4 text-sm text-slate-600">{status}</p> : null}
-
-            {result ? (
-              <div className="mt-4 rounded-md bg-[#F8F9FB] p-4 text-sm">
-                <h4 className="mb-1 font-semibold">Hasil Ekstraksi</h4>
-                <p className="mb-3 text-xs text-[#6B7280]">
-                  Klik field approver (mis. Accepted By) untuk mencari dan memilih user dari SSO.
-                </p>
+              <div className="p-6">
                 <EditableResultView value={editableResult} onChange={setEditableResult} unsupportedKeys={unsupportedFieldKeys} />
               </div>
-            ) : null}
-          </div>
-
-          <div className="sticky bottom-0 border-t border-[#E3E6EA] bg-white px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-md border border-[#D1D5DB] px-3 py-2 text-sm font-medium text-[#1F3A5F] hover:bg-[#F1F3F6]"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!editableResult || submitting}
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-[#10B981] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-slate-200 transition hover:bg-[#059669] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Menyimpan...
-                  </>
-                ) : (
-                  'Simpan sebagai Pengajuan'
-                )}
-              </button>
             </div>
-          </div>
+          ) : null}
+        </div>
+
+        <div className="border-t border-[#E3E6EA] bg-white px-6 py-4 flex items-center justify-end gap-3 sticky bottom-0 z-20 rounded-b-2xl">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-[#E3E6EA] bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-[#F8F9FB] hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!editableResult || submitting}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#10B981] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#059669] focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-[#10B981]"
+          >
+            {submitting ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Menyimpan...
+              </>
+            ) : (
+              'Simpan Pengajuan'
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -417,23 +481,27 @@ function EditableResultView({ value, onChange, unsupportedKeys }: { value: any; 
   useEffect(() => setLocal(value ?? null), [value]);
 
   if (!local || typeof local !== "object") {
-    return <div className="text-sm text-[#111827]">{String(local ?? "")}</div>;
+    return <div className="text-sm text-slate-800 font-medium">{String(local ?? "")}</div>;
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-0 divide-y divide-[#E3E6EA]">
       {local && typeof local === 'object' ? (
         Object.keys(local).map((k) => {
           const isUnsupported = unsupportedKeys.has(k);
           return (
-            <div key={k} className="flex gap-3 items-start">
-              <div className="w-44 shrink-0 text-[13px] text-[#6B7280]">
-                {k === "approval_roles" ? "Approval Roles" : formatApproverFieldLabel(k)}
+            <div key={k} className="flex flex-col lg:flex-row lg:items-start gap-2 lg:gap-6 py-4 group">
+              <div className="lg:w-1/4 shrink-0 flex flex-col justify-start pt-1">
+                <label className="text-[13px] font-semibold text-slate-700 capitalize tracking-tight">
+                  {k === "approval_roles" ? "Approval Roles" : formatApproverFieldLabel(k)}
+                </label>
                 {isUnsupported ? (
-                  <div className="text-[11px] text-[#9CA3AF]">tidak akan disimpan</div>
+                  <span className="inline-flex items-center mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200/50 w-max">
+                    Tidak disimpan
+                  </span>
                 ) : null}
               </div>
-              <div className={`min-w-0 flex-1 ${isUnsupported ? 'opacity-70' : ''}`}>
+              <div className={`min-w-0 flex-1 w-full ${isUnsupported ? 'opacity-60 grayscale filter' : ''}`}>
                 <EditableValue
                   fieldKey={k}
                   value={local[k]}
@@ -448,7 +516,7 @@ function EditableResultView({ value, onChange, unsupportedKeys }: { value: any; 
           );
         })
       ) : (
-        <div className="text-sm text-[#111827]">{String(local)}</div>
+        <div className="text-sm text-slate-800 font-medium">{String(local)}</div>
       )}
     </div>
   );
@@ -465,12 +533,14 @@ function EditableValue({
   onChange: (v: any) => void;
   inApprovalRoles?: boolean;
 }) {
+  const isMoney = isMoneyField(fieldKey);
+
   if (fieldKey === "approval_roles" && value && typeof value === "object" && !Array.isArray(value)) {
     return (
-      <div className="space-y-2 rounded-md border border-[#E3E6EA] bg-white p-3">
+      <div className="space-y-0 divide-y divide-[#E3E6EA] rounded-xl border border-[#E3E6EA] bg-[#F8F9FB]/50 overflow-hidden">
         {Object.entries(value as Record<string, unknown>).map(([roleKey, roleValue]) => (
-          <div key={roleKey} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-3">
-            <div className="w-36 shrink-0 text-[12px] font-medium text-[#374151]">
+          <div key={roleKey} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 hover:bg-white transition-colors">
+            <div className="sm:w-1/3 shrink-0 text-xs font-semibold text-slate-700 capitalize tracking-tight">
               {formatApproverFieldLabel(roleKey)}
             </div>
             <div className="min-w-0 flex-1">
@@ -489,33 +559,41 @@ function EditableValue({
 
   if (inApprovalRoles || (fieldKey && isApproverFieldKey(fieldKey))) {
     return (
-      <SsoUserPicker
-        value={value}
-        onChange={onChange}
-        placeholder={`Pilih ${formatApproverFieldLabel(fieldKey || "")}`}
-      />
+      <div className="relative">
+        <SsoUserPicker
+          value={value}
+          onChange={onChange}
+          placeholder={`Pilih ${formatApproverFieldLabel(fieldKey || "")}`}
+        />
+      </div>
     );
   }
 
   if (value === null || value === undefined) {
     return (
-      <input
-        className="w-full rounded border p-1"
-        value=""
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <div className="relative">
+        {isMoney && <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-medium">Rp</span>}
+        <input
+          className={`w-full rounded-lg border border-[#E3E6EA] px-3 py-2 text-sm text-slate-900 transition-all focus:border-[#1F3A5F] focus:outline-none focus:ring-4 focus:ring-[#1F3A5F]/10 hover:border-slate-400 bg-white placeholder:text-slate-400 shadow-sm ${isMoney ? 'pl-9 text-right font-mono' : ''}`}
+          value=""
+          onChange={(e) => onChange(isMoney ? parseMoney(e.target.value) : e.target.value)}
+        />
+      </div>
     );
   }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return <div className="text-sm text-[#6B7280]">(kosong)</div>;
+    if (value.length === 0) return <div className="text-sm text-slate-400 italic bg-[#F8F9FB] px-3 py-2 rounded-lg border border-dashed border-[#E3E6EA] w-max">(Tidak ada item)</div>;
     if (value.every((item) => typeof item !== "object")) {
       return (
-        <ul className="ml-5 list-decimal space-y-1">
+        <ul className="space-y-2 mt-1">
           {value.map((item, index) => (
-            <li key={index}>
+            <li key={index} className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#F8F9FB] text-[11px] font-bold text-slate-500 shrink-0 border border-[#E3E6EA]">
+                {index + 1}
+              </span>
               <input
-                className="w-full rounded border p-1"
+                className="w-full rounded-lg border border-[#E3E6EA] px-3 py-2 text-sm text-slate-900 transition-all focus:border-[#1F3A5F] focus:outline-none focus:ring-4 focus:ring-[#1F3A5F]/10 hover:border-slate-400 bg-white shadow-sm"
                 value={String(item)}
                 onChange={(e) => {
                   const next = [...value];
@@ -531,49 +609,60 @@ function EditableValue({
 
     const keys = Array.from(new Set(value.flatMap((row: any) => Object.keys(row || {}))));
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="text-left text-[12px] text-[#6B7280]">
-              {keys.map((key) => (
-                <th key={key} className="px-2 py-1">
-                  {key}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {value.map((row: any, rowIndex: number) => (
-              <tr key={rowIndex} className="border-t">
+      <div className="overflow-hidden rounded-xl border border-[#E3E6EA] shadow-sm mt-1 bg-white ring-1 ring-slate-900/5">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead className="bg-[#F8F9FB] text-slate-600 border-b border-[#E3E6EA]">
+              <tr>
                 {keys.map((key) => (
-                  <td key={key} className="px-2 py-1 align-top">
-                    <input
-                      className="w-full rounded border p-1"
-                      value={row?.[key] ?? ""}
-                      onChange={(e) => {
-                        const next = value.map((current: any, index: number) =>
-                          index === rowIndex ? { ...current, [key]: e.target.value } : current,
-                        );
-                        onChange(next);
-                      }}
-                    />
-                  </td>
+                  <th key={key} className={`px-4 py-3 font-semibold whitespace-nowrap text-xs uppercase tracking-wider ${isMoneyField(key) ? 'text-right' : ''}`}>
+                    {key.replace(/_/g, ' ')}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-[#E3E6EA] bg-white">
+              {value.map((row: any, rowIndex: number) => (
+                <tr key={rowIndex} className="hover:bg-[#F8F9FB]/50 transition-colors group">
+                  {keys.map((key) => {
+                    const isMoneyCol = isMoneyField(key);
+                    return (
+                      <td key={key} className="p-2 align-top min-w-[120px]">
+                        <div className="relative">
+                          {isMoneyCol && <span className="absolute left-2.5 top-2 text-[11px] text-slate-400 font-medium">Rp</span>}
+                          <input
+                            className={`w-full rounded-md border border-transparent px-2 py-1.5 text-sm text-slate-800 transition-all focus:border-[#1F3A5F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1F3A5F]/20 hover:border-slate-300 bg-transparent group-hover:bg-white focus:bg-white ${isMoneyCol ? 'pl-8 text-right font-mono' : ''}`}
+                            value={isMoneyCol ? formatMoney(row?.[key]) : (row?.[key] ?? "")}
+                            onChange={(e) => {
+                              const val = isMoneyCol ? parseMoney(e.target.value) : e.target.value;
+                              const next = value.map((current: any, index: number) =>
+                                index === rowIndex ? { ...current, [key]: val } : current,
+                              );
+                              onChange(next);
+                            }}
+                          />
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
 
   if (typeof value === "object") {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3 p-4 rounded-xl border border-[#E3E6EA] bg-[#F8F9FB]/50">
         {Object.keys(value).map((key) => (
-          <div key={key} className="flex gap-3">
-            <div className="w-36 text-[13px] text-[#6B7280]">{formatApproverFieldLabel(key)}</div>
-            <div className="min-w-0 flex-1">
+          <div key={key} className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center">
+            <div className="sm:w-1/3 text-xs font-semibold text-slate-600 capitalize tracking-tight shrink-0">
+              {formatApproverFieldLabel(key)}
+            </div>
+            <div className="min-w-0 flex-1 w-full">
               <EditableValue
                 fieldKey={key}
                 value={value[key]}
@@ -587,10 +676,13 @@ function EditableValue({
   }
 
   return (
-    <input
-      className="w-full rounded border p-1"
-      value={String(value)}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <div className="relative">
+      {isMoney && <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-medium">Rp</span>}
+      <input
+        className={`w-full rounded-lg border border-[#E3E6EA] px-3 py-2 text-sm text-slate-900 transition-all focus:border-[#1F3A5F] focus:outline-none focus:ring-4 focus:ring-[#1F3A5F]/10 hover:border-slate-400 bg-white shadow-sm font-medium ${isMoney ? 'pl-9 text-right font-mono' : ''}`}
+        value={isMoney ? formatMoney(value) : String(value)}
+        onChange={(e) => onChange(isMoney ? parseMoney(e.target.value) : e.target.value)}
+      />
+    </div>
   );
 }
