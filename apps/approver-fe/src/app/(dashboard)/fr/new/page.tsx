@@ -15,14 +15,57 @@ interface Category {
 interface Tax {
   id: number;
   name: string;
-  value: number;
+  value: number; // persentase, misal 11 = 11%
 }
+
+// Klasifikasi jenis pajak untuk logika akuntansi yang benar
+type TaxType = "ppn" | "pph";
 
 interface ItemLine {
   id: string;
   deskripsi: string;
   sub_total: number;
   selectedTaxIds: number[];
+}
+
+// ─── Helper: tentukan apakah suatu tax adalah PPh (pengurang) atau PPN (penambah) ──────────────
+function getTaxType(taxName: string): TaxType {
+  const lower = taxName.toLowerCase();
+  if (lower.includes("pph")) return "pph";
+  return "ppn"; // default: PPN atau sejenisnya = penambah
+}
+
+// ─── Helper: hitung semua komponen pajak per item ───────────────────────────────────────────────
+function calcItemBreakdown(item: ItemLine, taxes: Tax[]) {
+  const subtotal = Number(item.sub_total) || 0;
+
+  let ppnAmount = 0;
+  let pphAmount = 0;
+
+  item.selectedTaxIds.forEach((tId) => {
+    const tax = taxes.find((t) => t.id === tId);
+    if (!tax) return;
+    const rate = Number(tax.value) || 0;
+    const nominal = subtotal * (rate / 100);
+
+    if (getTaxType(tax.name) === "pph") {
+      // PPh — pemotongan (mengurangi net yang diterima vendor)
+      pphAmount += nominal;
+    } else {
+      // PPN — ditambahkan ke total tagihan
+      ppnAmount += nominal;
+    }
+  });
+
+  const totalTagihan = subtotal + ppnAmount;       // yang harus dibayar perusahaan
+  const netVendor    = totalTagihan - pphAmount;   // yang diterima vendor setelah potong PPh
+
+  return { subtotal, ppnAmount, pphAmount, totalTagihan, netVendor };
+}
+
+// ─── Format angka ke Rupiah tanpa simbol ────────────────────────────────────────────────────────
+function fmt(n: number, currency: string) {
+  return `${currency} ${n.toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
 export default function NewFrPage() {
@@ -36,7 +79,7 @@ export default function NewFrPage() {
   const [kategoriFrId, setKategoriFrId] = useState<number | "">("");
   const [currency, setCurrency] = useState("IDR");
   const [keterangan, setKeterangan] = useState("");
-  
+
   const [items, setItems] = useState<ItemLine[]>([
     { id: "1", deskripsi: "", sub_total: 0, selectedTaxIds: [] },
   ]);
@@ -45,7 +88,6 @@ export default function NewFrPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    // Generate automatic FR number default
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     setNumberFr(`FR/${dateStr}/${randomNum}`);
@@ -107,18 +149,11 @@ export default function NewFrPage() {
     );
   };
 
-  // Calculations
-  const calculateItemTotal = (item: ItemLine) => {
-    const sub = item.sub_total || 0;
-    let taxAmount = 0;
-    item.selectedTaxIds.forEach((tId) => {
-      const t = taxes.find((tax) => tax.id === tId);
-      if (t) taxAmount += t.value;
-    });
-    return sub + taxAmount;
-  };
-
-  const grandTotal = items.reduce((acc, item) => acc + calculateItemTotal(item), 0);
+  // Grand Total = jumlah semua "Total Tagihan" per item (yang perusahaan bayar)
+  const grandTotal = items.reduce(
+    (acc, item) => acc + calcItemBreakdown(item, taxes).totalTagihan,
+    0
+  );
 
   const handleSubmit = async (submitStatus: "draft" | "submitted") => {
     setErrorMsg(null);
@@ -138,18 +173,18 @@ export default function NewFrPage() {
     setSubmitting(true);
     try {
       const xsrfToken = await refreshCsrfCookie();
-      
+
       const payloadItems = items.map((item) => {
         const itemTaxes = item.selectedTaxIds.map((tId) => {
           const t = taxes.find((tx) => tx.id === tId);
           return {
             tax_id: tId,
-            value: t ? t.value : 0,
+            value: t ? Number(t.value) : 0,
           };
         });
         return {
           deskripsi: item.deskripsi,
-          sub_total: item.sub_total,
+          sub_total: Number(item.sub_total) || 0,
           taxes: itemTaxes,
         };
       });
@@ -185,6 +220,10 @@ export default function NewFrPage() {
       setSubmitting(false);
     }
   };
+
+  // Pisahkan daftar pajak berdasarkan jenisnya untuk label yang lebih informatif di UI
+  const ppnTaxes = taxes.filter((t) => getTaxType(t.name) === "ppn");
+  const pphTaxes = taxes.filter((t) => getTaxType(t.name) === "pph");
 
   return (
     <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
@@ -294,12 +333,16 @@ export default function NewFrPage() {
 
           <div className="space-y-3">
             {items.map((item, index) => {
-              const itemTotal = calculateItemTotal(item);
+              const { subtotal, ppnAmount, pphAmount, totalTagihan, netVendor } =
+                calcItemBreakdown(item, taxes);
+              const hasPph = pphAmount > 0;
+
               return (
                 <div
                   key={item.id}
                   className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3"
                 >
+                  {/* Header item */}
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-gray-500">Item #{index + 1}</span>
                     {items.length > 1 && (
@@ -313,6 +356,7 @@ export default function NewFrPage() {
                     )}
                   </div>
 
+                  {/* Input Deskripsi & Subtotal */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="md:col-span-2">
                       <label className="block text-xs text-gray-600 mb-1">Deskripsi Item</label>
@@ -325,57 +369,173 @@ export default function NewFrPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Subtotal ({currency})</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Subtotal / DPP ({currency})
+                      </label>
                       <input
                         type="number"
-                        value={item.sub_total}
-                        onChange={(e) => updateItem(item.id, "sub_total", parseFloat(e.target.value) || 0)}
+                        min="0"
+                        step="1"
+                        // Kosongkan field saat nilai 0 agar tidak ada "0" di depan
+                        value={item.sub_total === 0 ? "" : item.sub_total}
+                        onChange={(e) => {
+                          const num = parseFloat(e.target.value);
+                          updateItem(item.id, "sub_total", isNaN(num) ? 0 : num);
+                        }}
+                        placeholder="0"
                         className="w-full text-sm font-mono border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:border-[#1F3A5F]"
                       />
                     </div>
                   </div>
 
+                  {/* Pilihan Pajak — Checkbox independen */}
                   {taxes.length > 0 && (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Pajak yang Berlaku</label>
-                      <div className="flex flex-wrap gap-2">
-                        {taxes.map((t) => {
-                          const isChecked = item.selectedTaxIds.includes(t.id);
-                          return (
-                            <button
-                              type="button"
-                              key={t.id}
-                              onClick={() => toggleTax(item.id, t.id)}
-                              className={`text-xs px-2.5 py-1 rounded-md border transition ${
-                                isChecked
-                                  ? "bg-[#1F3A5F] text-white border-[#1F3A5F]"
-                                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                              }`}
-                            >
-                              {t.name} ({t.value.toLocaleString()})
-                            </button>
-                          );
-                        })}
-                      </div>
+                    <div className="space-y-2">
+                      {/* PPN */}
+                      {ppnTaxes.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 mb-1">PPN</p>
+                          <div className="flex flex-wrap gap-2">
+                            {ppnTaxes.map((t) => {
+                              const isChecked = item.selectedTaxIds.includes(t.id);
+                              return (
+                                <label
+                                  key={t.id}
+                                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border cursor-pointer transition select-none ${
+                                    isChecked
+                                      ? "bg-blue-600 text-white border-blue-600"
+                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={isChecked}
+                                    onChange={() => toggleTax(item.id, t.id)}
+                                  />
+                                  {t.name} ({Number(t.value)}%)
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* PPh */}
+                      {pphTaxes.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 mb-1">PPh</p>
+                          <div className="flex flex-wrap gap-2">
+                            {pphTaxes.map((t) => {
+                              const isChecked = item.selectedTaxIds.includes(t.id);
+                              return (
+                                <label
+                                  key={t.id}
+                                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border cursor-pointer transition select-none ${
+                                    isChecked
+                                      ? "bg-amber-600 text-white border-amber-600"
+                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={isChecked}
+                                    onChange={() => toggleTax(item.id, t.id)}
+                                  />
+                                  {t.name} ({Number(t.value)}%)
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  <div className="text-right text-xs font-semibold text-gray-700 pt-1">
-                    Total Item (Inc. Tax):{" "}
-                    <span className="font-mono text-sm text-gray-900">
-                      {currency} {itemTotal.toLocaleString()}
-                    </span>
+                  {/* Breakdown Pajak per Item */}
+                  <div className="mt-2 rounded-md border border-gray-200 bg-white overflow-hidden text-xs">
+                    <table className="w-full">
+                      <tbody>
+                        {/* Subtotal (DPP) */}
+                        <tr className="border-b border-gray-100">
+                          <td className="px-3 py-1.5 text-gray-500">Subtotal (DPP)</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-gray-700">
+                            {fmt(subtotal, currency)}
+                          </td>
+                        </tr>
+
+                        {/* PPN — hanya tampil jika ada */}
+                        {ppnAmount > 0 && (
+                          <tr className="border-b border-gray-100">
+                            <td className="px-3 py-1.5 text-blue-600">
+                              PPN{" "}
+                              <span className="text-gray-400">
+                                (+{item.selectedTaxIds
+                                  .map((id) => taxes.find((t) => t.id === id))
+                                  .filter((t) => t && getTaxType(t.name) === "ppn")
+                                  .map((t) => `${Number(t!.value)}%`)
+                                  .join(", ")})
+                              </span>
+                            </td>
+                            <td className="px-3 py-1.5 text-right font-mono text-blue-600">
+                              + {fmt(ppnAmount, currency)}
+                            </td>
+                          </tr>
+                        )}
+
+                        {/* Total Tagihan = Subtotal + PPN */}
+                        <tr className={`font-semibold ${hasPph ? "border-b border-gray-100" : ""}`}>
+                          <td className="px-3 py-2 text-gray-800">Total Tagihan</td>
+                          <td className="px-3 py-2 text-right font-mono text-gray-900">
+                            {fmt(totalTagihan, currency)}
+                          </td>
+                        </tr>
+
+                        {/* PPh — hanya tampil jika ada */}
+                        {hasPph && (
+                          <>
+                            <tr className="border-b border-gray-100 bg-amber-50">
+                              <td className="px-3 py-1.5 text-amber-700">
+                                PPh{" "}
+                                <span className="text-gray-400">
+                                  (−{item.selectedTaxIds
+                                    .map((id) => taxes.find((t) => t.id === id))
+                                    .filter((t) => t && getTaxType(t.name) === "pph")
+                                    .map((t) => `${Number(t!.value)}%`)
+                                    .join(", ")})
+                                </span>
+                              </td>
+                              <td className="px-3 py-1.5 text-right font-mono text-amber-700">
+                                − {fmt(pphAmount, currency)}
+                              </td>
+                            </tr>
+                            <tr className="font-semibold bg-amber-50">
+                              <td className="px-3 py-2 text-gray-800">
+                                Net Diterima Vendor
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono text-gray-900">
+                                {fmt(netVendor, currency)}
+                              </td>
+                            </tr>
+                          </>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               );
             })}
           </div>
 
+          {/* Grand Total */}
           <div className="flex justify-end pt-4 border-t border-gray-200">
             <div className="text-right">
-              <span className="text-xs text-gray-500 block uppercase font-medium">Grand Total</span>
+              <span className="text-xs text-gray-500 block uppercase font-medium">
+                Grand Total (Total Tagihan ke Perusahaan)
+              </span>
               <span className="text-xl font-bold font-mono text-[#1F3A5F]">
-                {currency} {grandTotal.toLocaleString()}
+                {fmt(grandTotal, currency)}
               </span>
             </div>
           </div>

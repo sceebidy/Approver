@@ -73,11 +73,27 @@ class DocumentSigningService
 
         // Tentukan relasi approver_line berdasarkan jenis dokumen
         $approvers = collect();
-        if ($documentType === 'fs') {
+        if ($documentType === 'fs' || $documentType === 'fr') {
             $approvers = $document->approvers()->with('approver')->where('status', 'approved')->get();
         } elseif (method_exists($document, 'approverLines')) {
             $approvers = $document->approverLines()->with('approver')->where('status', 'approved')->get();
         }
+
+        // Urutkan approvers berdasarkan 4 role berjenjang eksplisit
+        $roleOrder = [
+            'issued_by'          => 1,
+            'checked_by'         => 2,
+            'checkedby'          => 2,
+            'approved_by'        => 3,
+            'approvedby'         => 3,
+            'approved_by_atasan' => 4,
+            'atasan'             => 4,
+        ];
+
+        $approvers = $approvers->sortBy(function ($line) use ($roleOrder) {
+            $roleKey = strtolower(trim($line->role ?? ''));
+            return $roleOrder[$roleKey] ?? 99;
+        })->values();
 
         // Siapkan QR Code data URI untuk setiap approver yang approved
         $signedApprovers = [];
@@ -87,7 +103,7 @@ class DocumentSigningService
             $approverUser = $line->approver;
             $signedApprovers[] = [
                 'line_id'      => $line->id,
-                'role'         => $line->role ?? 'Approver',
+                'role'         => str_replace('_', ' ', $line->role ?? 'Approver'),
                 'name'         => $approverUser->name ?? 'User #' . $line->approver_id,
                 'jabatan'      => $approverUser->role ?? $approverUser->unit_nama ?? 'Pejabat Berwenang',
                 'signed_at'    => $line->signed_at ? \Carbon\Carbon::parse($line->signed_at)->format('d/m/Y H:i') : now()->format('d/m/Y H:i'),

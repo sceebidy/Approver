@@ -12,7 +12,7 @@ class FrController extends Controller
 {
     public function index()
     {
-        $items = Fr::with('requester:id,name', 'kategoriFr:id,nama')
+        $items = Fr::with('requester:id,name', 'kategoriFr:id,nama', 'approvers')
             ->latest()
             ->get()
             ->map(fn($f) => [
@@ -26,6 +26,7 @@ class FrController extends Controller
                 'status'            => $f->status ?? 'pending',
                 'keterangan'        => $f->keterangan,
                 'created_at'        => $f->created_at,
+                'can_cancel'        => !$f->approvers->contains('status', 'approved'),
             ]);
 
         return response()->json(['success' => true, 'data' => $items]);
@@ -128,6 +129,7 @@ class FrController extends Controller
             foreach ($kategori->approverKategoriFr as $approverKat) {
                 $fr->approvers()->create([
                     'approver_id' => $approverKat->user_id,
+                    'role' => $approverKat->role,
                     'status' => 'pending',
                     'update_date_time' => null,
                 ]);
@@ -140,6 +142,28 @@ class FrController extends Controller
             'success' => true,
             'data' => $fr,
         ], 201);
+    }
+
+    public function destroy($id)
+    {
+        $fr = Fr::with('approvers')->findOrFail($id);
+
+        $hasApproved = $fr->approvers()->where('status', 'approved')->exists();
+
+        if ($hasApproved) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengajuan tidak dapat dihapus karena sudah ada approval yang disetujui.'
+            ], 409);
+        }
+
+        DB::transaction(function () use ($fr) {
+            $fr->approvers()->delete();
+            $fr->itemLines()->delete(); // relasi itemLines() di model Fr
+            $fr->delete();
+        });
+
+        return response()->json(['success' => true, 'message' => 'Pengajuan FR berhasil dihapus.']);
     }
 }
 

@@ -68,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/fr/categories', [FrController::class, 'categories']);
     Route::get('/fr/approved-list', [FrController::class, 'approvedList']);
     Route::post('/fr', [FrController::class, 'store']);
+    Route::delete('/fr/{id}', [FrController::class, 'destroy']);
 
     // FS
     Route::get('/fs', [FsController::class, 'index']);
