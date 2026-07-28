@@ -175,6 +175,12 @@ class DocumentSigningService
         $pythonApiUrl = rtrim(env('PYTHON_API_URL', 'http://127.0.0.1:8001'), '/');
         $stampEndpoint = "{$pythonApiUrl}/stamp-pdf";
 
+        Log::info("[DocumentSigning] Mengirim payload ke Python stamper", [
+            'document_id' => $document->id,
+            'approvers_count' => count($approversForStamper),
+            'approvers' => $approversForStamper
+        ]);
+
         try {
             $response = Http::timeout(30)
                 ->attach('file', file_get_contents($sourcePdfFullPath), basename($sourcePdfFullPath))

@@ -155,19 +155,52 @@ def _create_stamp_overlay(
     # Mapping for PPAB approval roles to physical columns (0-indexed)
     role_col_mapping = {
         "pelaksanaan_disetujui_oleh": [0],
+        "pelaksanaan disetujui oleh": [0],
         "diperiksa_oleh": [1, 2],
+        "diperiksa oleh": [1, 2],
         "anggaran_disetujui_oleh": [3],
+        "anggaran disetujui oleh": [3],
     }
-    
-    role_counts = {}
-    fallback_idx = 0
     
     # Track how many people are in each physical column so we can stack if necessary
     col_occupancy = {}
+    fallback_idx = 0
 
+    # Group approvers by role to detect under-filled roles
+    approvers_by_role = {}
+    for approver in approvers:
+        role_key = approver.role.lower().strip() if approver.role else ""
+        if role_key not in approvers_by_role:
+            approvers_by_role[role_key] = []
+        approvers_by_role[role_key].append(approver)
+        
+    final_approvers = []
     for approver in approvers:
         role_key = approver.role.lower().strip() if approver.role else ""
         
+        # If this is a recognized role, check if it needs duplication
+        if role_key in role_col_mapping:
+            allowed_cols = role_col_mapping[role_key]
+            # Find the index of this approver in their role group
+            # We process them sequentially
+            final_approvers.append((approver, role_key))
+            
+            # If this is the last approver in the group and we haven't filled all columns,
+            # duplicate this approver for the remaining columns.
+            group = approvers_by_role[role_key]
+            if approver is group[-1]:
+                # We reached the last provided approver for this role.
+                # Pad with copies of this approver until we fill allowed_cols
+                current_count = len(group)
+                while current_count < len(allowed_cols):
+                    final_approvers.append((approver, role_key))
+                    current_count += 1
+        else:
+            final_approvers.append((approver, role_key))
+            
+    role_counts = {}
+
+    for approver, role_key in final_approvers:
         if role_key in role_col_mapping:
             allowed_cols = role_col_mapping[role_key]
             count = role_counts.get(role_key, 0)
@@ -187,12 +220,9 @@ def _create_stamp_overlay(
         col_occupancy[col_idx] = occupancy + 1
         
         # If there are multiple people in the same column, offset them horizontally slightly or vertically.
-        # For a simple fix, we shift vertically by a fraction and shrink the gap, 
-        # or we assume they mostly fit the 1-to-1 mapping.
         current_qr_y = qr_y
         current_label_y = label_y
         if occupancy > 0:
-            # Shift the next QR code to the right and slightly up if stacked
             col_center_x += (occupancy * 15)
             current_qr_y += (occupancy * 15)
             current_label_y += (occupancy * 15)
