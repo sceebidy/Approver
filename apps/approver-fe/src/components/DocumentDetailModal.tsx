@@ -258,7 +258,10 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                           <th className="px-4 py-2.5 font-medium text-right">Qty</th>
                           <th className="px-4 py-2.5 font-medium">Satuan</th>
                           {docType !== 'mis' && (
-                            <th className="px-4 py-2.5 font-medium text-right">Harga Satuan</th>
+                            <>
+                              <th className="px-4 py-2.5 font-medium text-right">Harga Satuan</th>
+                              <th className="px-4 py-2.5 font-medium text-right">Total Harga</th>
+                            </>
                           )}
                           {docType === 'mis' && (
                             <th className="px-4 py-2.5 font-medium">Remark</th>
@@ -283,10 +286,16 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                             <td className="px-4 py-2.5 text-right font-mono text-[12px]">{Number(item.qty).toLocaleString('id-ID')}</td>
                             <td className="px-4 py-2.5 text-[#6B7280]">{item.satuan || '-'}</td>
                             {docType !== 'mis' && (
-                              <td className="px-4 py-2.5 text-right font-mono text-[12px] whitespace-nowrap">
-                                {item.currency !== 'IDR' ? `${item.currency} ` : 'Rp '}
-                                {Number(item.harga_satuan).toLocaleString('id-ID')}
-                              </td>
+                              <>
+                                <td className="px-4 py-2.5 text-right font-mono text-[12px] whitespace-nowrap">
+                                  {item.currency && item.currency !== 'IDR' ? `${item.currency} ` : 'Rp '}
+                                  {Number(item.harga_satuan).toLocaleString('id-ID')}
+                                </td>
+                                <td className="px-4 py-2.5 text-right font-mono text-[12px] whitespace-nowrap font-medium text-[#111827]">
+                                  {item.currency && item.currency !== 'IDR' ? `${item.currency} ` : 'Rp '}
+                                  {Number((item.qty || 0) * (item.harga_satuan || 0)).toLocaleString('id-ID')}
+                                </td>
+                              </>
                             )}
                             {docType === 'mis' && (
                               <td className="px-4 py-2.5 text-[#6B7280]">{item.remark || '-'}</td>
@@ -299,25 +308,59 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                 ) : (
                   <div className="p-8 text-center text-sm text-[#6B7280]">Tidak ada item ditemukan.</div>
                 )}
-                {/* Subtotals (for PPAB/PO) */}
-                {data.subtotals && data.subtotals.length > 0 && (
+                {/* Subtotals (for PPAB/PO/etc) */}
+                {docType !== 'mis' && (actualItems.length > 0 || (data.subtotals && data.subtotals.length > 0)) && (
                   <div className="border-t border-[#E3E6EA] bg-slate-50 p-4 flex justify-end">
                     <div className="w-full sm:w-1/2">
                       <table className="w-full text-[13px]">
                         <tbody className="divide-y divide-slate-200/60">
-                          {data.subtotals.map((st, idx) => (
+                          {actualItems.length > 0 && (
+                            <tr>
+                              <td className="py-2 text-[#374151] font-semibold">Total Nilai Item</td>
+                              <td className="py-2 text-right font-bold text-[#111827] font-mono text-[13.5px]">
+                                {actualItems[0]?.currency && actualItems[0]?.currency !== 'IDR' ? `${actualItems[0]?.currency} ` : 'Rp '}
+                                {Number(actualItems.reduce((acc, item) => acc + ((Number(item.qty) || 0) * (Number(item.harga_satuan) || 0)), 0)).toLocaleString('id-ID')}
+                              </td>
+                            </tr>
+                          )}
+                          {data.subtotals && data.subtotals.length > 0 ? data.subtotals.map((st, idx) => (
                             <tr key={idx}>
                               <td className="py-1.5 text-[#6B7280]">{st.deskripsi}</td>
-                              <td className="py-1.5 text-right font-semibold text-[#111827] font-mono text-[12.5px]">
+                              <td className="py-1.5 text-right font-medium text-[#111827] font-mono text-[12.5px]">
                                 {st.value ? (
                                   <>
-                                    <span className="text-[11px] text-[#9CA3AF] font-normal mr-1">{st.currency || 'IDR'}</span>
+                                    <span className="text-[11px] text-[#9CA3AF] font-normal mr-1">{st.currency && st.currency !== 'IDR' ? st.currency : 'Rp'}</span>
                                     {Number(st.value).toLocaleString('id-ID')}
                                   </>
                                 ) : '-'}
                               </td>
                             </tr>
-                          ))}
+                          )) : (
+                            docType === 'po' && actualItems.length > 0 && (() => {
+                              const totalItems = actualItems.reduce((acc, item) => acc + ((Number(item.qty) || 0) * (Number(item.harga_satuan) || 0)), 0);
+                              const ppn = totalItems * 0.11;
+                              const grandTotal = totalItems + ppn;
+                              const cur = actualItems[0]?.currency && actualItems[0]?.currency !== 'IDR' ? actualItems[0].currency : 'Rp';
+                              return (
+                                <>
+                                  <tr>
+                                    <td className="py-1.5 text-[#6B7280]">PPN 11% (Estimasi)</td>
+                                    <td className="py-1.5 text-right font-medium text-[#111827] font-mono text-[12.5px]">
+                                      <span className="text-[11px] text-[#9CA3AF] font-normal mr-1">{cur}</span>
+                                      {Number(ppn).toLocaleString('id-ID')}
+                                    </td>
+                                  </tr>
+                                  <tr>
+                                    <td className="py-2 text-[#374151] font-bold">Grand Total (Estimasi)</td>
+                                    <td className="py-2 text-right font-bold text-[#111827] font-mono text-[13.5px]">
+                                      <span className="text-[11px] text-[#9CA3AF] font-normal mr-1">{cur}</span>
+                                      {Number(grandTotal).toLocaleString('id-ID')}
+                                    </td>
+                                  </tr>
+                                </>
+                              );
+                            })()
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -333,7 +376,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                 <div className="p-5">
                   {actualApprovers.length > 0 ? (
                     <div className="relative border-l-2 border-slate-100 ml-3 md:ml-4 space-y-6 pb-2">
-                      {actualApprovers.map((line, idx) => {
+                      {actualApprovers.map((line: any, idx: number) => {
                         const isApproved = line.status === 'approved';
                         const isRejected = line.status === 'rejected';
                         const isPending = line.status === 'pending';

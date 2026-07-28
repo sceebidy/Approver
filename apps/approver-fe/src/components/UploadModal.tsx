@@ -130,11 +130,17 @@ function buildPayload(docType: 'ppab' | 'po' | 'mis', raw: any): any {
         }))
       : [];
 
+    const subtotals = [];
+    if (raw.subtotal) subtotals.push({ deskripsi: 'Subtotal', value: Number(raw.subtotal) });
+    if (raw.ppn_11_persen) subtotals.push({ deskripsi: 'PPN 11%', value: Number(raw.ppn_11_persen) });
+    if (raw.grand_total) subtotals.push({ deskripsi: 'Grand Total', value: Number(raw.grand_total) });
+
     return {
       nomor_po: raw.nomor_po ?? '',
       vendor,
       nomor_ppab: raw.nomor_ppab ?? null,
       items,
+      subtotals,
     };
   }
 
