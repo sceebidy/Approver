@@ -40,7 +40,7 @@ export default function PoListPage() {
         createNode={
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#1F3A5F] to-[#2B5284] text-white text-[13px] font-medium px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md hover:opacity-90 transition-all duration-200"
+            className="flex items-center justify-center gap-2 bg-[#1F3A5F] text-white text-[13px] font-medium px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md hover:opacity-90 transition-all duration-200"
           >
             <Plus size={16} strokeWidth={2} />
             Upload PDF

@@ -119,14 +119,14 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
         <div className="flex flex-col gap-1.5">
           <h1 className="text-[22px] md:text-[26px] font-extrabold text-[#111827] tracking-tight">{title}</h1>
           <p className="text-[13.5px] text-[#6B7280] font-medium">{subtitle}</p>
-          <div className="absolute bottom-1 left-0 w-12 h-1 bg-gradient-to-r from-[#1F3A5F] to-[#2B5284] rounded-full"></div>
+          <div className="absolute bottom-1 left-0 w-12 h-1 bg-[#1F3A5F] rounded-full"></div>
         </div>
         {createNode ? (
           createNode
         ) : (
           <Link
             href={createHref ?? "/upload"}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#1F3A5F] to-[#2B5284] text-white text-[13px] font-medium px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md hover:opacity-90 transition-all duration-200"
+            className="flex items-center justify-center gap-2 bg-[#1F3A5F] text-white text-[13px] font-medium px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md hover:opacity-90 transition-all duration-200"
           >
             <Plus size={16} strokeWidth={2} />
             {createLabel ?? "Upload PDF"}
@@ -201,7 +201,7 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#6B7280] bg-gradient-to-r from-[#F8F9FB] to-white border-b border-[#E3E6EA]">
+                <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#6B7280] bg-[#F8F9FB] border-b border-[#E3E6EA]">
                   {columns.map((c) => (
                     <th key={c.key} className={`px-5 py-3.5 ${c.align === "right" ? "text-right" : ""}`}>
                       {c.label}

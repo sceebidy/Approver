@@ -16,8 +16,8 @@ function NavItem({ icon: Icon, label, href, onClick, isCollapsed }: { icon: Luci
       title={isCollapsed ? label : undefined}
       className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-md text-[13.5px] transition-all duration-200 ${
         active 
-          ? "bg-gradient-to-r from-[#1F3A5F] to-[#2B5284] text-white font-medium shadow-sm" 
-          : "text-[#4B5563] hover:bg-gradient-to-r hover:from-[#F1F3F6] hover:to-transparent"
+          ? "bg-[#1F3A5F] text-white font-medium shadow-sm" 
+          : "text-[#4B5563] hover:bg-[#F1F3F6]"
       } ${isCollapsed ? "justify-center" : ""}`}
     >
       <Icon size={18} strokeWidth={active ? 2 : 1.75} className="shrink-0" />
@@ -87,7 +87,7 @@ export default function Sidebar() {
   };
 
   const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
-    <div className="flex flex-col h-full w-full bg-gradient-to-b from-white to-[#F8F9FB] overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-[#F8F9FB] overflow-hidden">
       <div className={`h-16 flex items-center px-4 border-b border-[#E3E6EA] ${collapsed ? "justify-center" : "justify-between"}`}>
         <div className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}>
           <img 
@@ -180,7 +180,7 @@ export default function Sidebar() {
           {user?.foto_profil ? (
             <img src={user.foto_profil} alt={user.name || "User"} className={`${collapsed ? "w-10 h-10" : "w-9 h-9"} rounded-full object-cover shrink-0 ring-2 ring-transparent group-hover:ring-[#E3E6EA] transition-all`} />
           ) : (
-            <div className={`${collapsed ? "w-10 h-10 text-[14px]" : "w-9 h-9 text-[13px]"} rounded-full bg-gradient-to-br from-[#1F3A5F] to-[#2B5284] text-white flex items-center justify-center font-semibold shrink-0 shadow-sm`}>
+            <div className={`${collapsed ? "w-10 h-10 text-[14px]" : "w-9 h-9 text-[13px]"} rounded-full bg-[#1F3A5F] text-white flex items-center justify-center font-semibold shrink-0 shadow-sm`}>
               {getInitials(user?.name || "U")}
             </div>
           )}

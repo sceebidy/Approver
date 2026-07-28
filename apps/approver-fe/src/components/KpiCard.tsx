@@ -16,7 +16,7 @@ export default function KpiCard({
   return (
     <div
       className={`rounded-2xl border border-slate-200/80 p-4 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.35)] ${
-        isAccent ? "bg-gradient-to-br from-[#FFF7F0] to-white" : "bg-white"
+        isAccent ? "bg-[#FFF7F0]" : "bg-white"
       }`}
     >
       <div className="flex items-center justify-between">
