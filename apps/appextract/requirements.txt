@@ -2,3 +2,7 @@ fastapi
 uvicorn
 pdfplumber
 python-multipart
+PyPDF2
+reportlab
+qrcode
+Pillow

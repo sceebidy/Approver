@@ -59,10 +59,11 @@ class SubmissionController extends Controller
             $documentId = null;
 
             if ($type === 'ppab') {
-                $ppab = Ppab::create([
+            $ppab = Ppab::create([
                     'user_id' => $user->id,
                     'deskripsi' => $data['deskripsi'] ?? 'Pengajuan PPAB',
                     'nomor_ppab' => $data['nomor_ppab'] ?? 'PPAB-' . time(),
+                    'source_pdf_path' => $data['source_pdf_path'] ?? null,
                 ]);
                 $documentId = $ppab->id;
 

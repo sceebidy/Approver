@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\PythonExtractorService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ExtractionController extends Controller
 {
@@ -17,6 +19,7 @@ class ExtractionController extends Controller
 
     /**
      * Handle the incoming document extraction request.
+     * Juga menyimpan PDF asli ke storage agar bisa di-stamp nantinya.
      *
      * @param Request $request
      * @return JsonResponse
@@ -37,9 +40,21 @@ class ExtractionController extends Controller
             ], 500);
         }
 
+        // Simpan PDF asli ke storage/app/source-documents/
+        $dirPath = storage_path('app/source-documents');
+        if (!file_exists($dirPath)) {
+            mkdir($dirPath, 0755, true);
+        }
+
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName = Str::slug($originalName) . '_' . time() . '.pdf';
+        $file->move($dirPath, $safeName);
+        $storedPath = "source-documents/{$safeName}";
+
         return response()->json([
             'message' => 'Document extracted successfully',
             'data' => $extractedData,
+            'source_pdf_path' => $storedPath,
         ]);
     }
 }

@@ -58,6 +58,7 @@ class PpabController extends Controller
             'nomor_ppab' => 'required|string|max:255|unique:ppab,nomor_ppab',
             'deskripsi' => 'required|string',
             'user_id' => 'nullable|integer|exists:users,id',
+            'source_pdf_path' => 'nullable|string|max:500',
             'items' => 'required|array|min:1',
             'items.*.deskripsi' => 'required|string',
             'items.*.satuan' => 'required|string|max:50',
@@ -89,6 +90,7 @@ class PpabController extends Controller
                 'user_id' => $userId,
                 'nomor_ppab' => $data['nomor_ppab'],
                 'deskripsi' => $data['deskripsi'],
+                'source_pdf_path' => $data['source_pdf_path'] ?? null,
             ]);
 
             foreach ($data['items'] as $item) {

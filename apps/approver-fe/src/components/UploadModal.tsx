@@ -161,6 +161,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
   const [editableResult, setEditableResult] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sourcePdfPath, setSourcePdfPath] = useState<string | null>(null);
   const unsupportedFieldKeys = new Set(['required_for', 'time', 'section']);
 
   useEffect(() => {
@@ -182,7 +183,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       setEditableResult(null);
       setUploading(false);
       setSubmitting(false);
-      setValidationErrors(null);
+      setSourcePdfPath(null);
     }
   }, [isOpen]);
 
@@ -229,6 +230,10 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       const extracted = data?.data ?? data;
       setResult(extracted);
       setEditableResult(extracted);
+      // Simpan path PDF asli dari response
+      if (data?.source_pdf_path) {
+        setSourcePdfPath(data.source_pdf_path);
+      }
     } catch (error) {
       setStatus(`Error koneksi: ${String(error)}`);
       setErrorMessage(`Error koneksi: ${String(error)}`);
@@ -264,6 +269,10 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
     try {
       // Transformasi data hasil ekstraksi ke format yang diharapkan backend
       const payload = buildPayload(type, editableResult);
+      // Sertakan path PDF asli agar bisa di-stamp (bukan di-generate ulang)
+      if (sourcePdfPath) {
+        payload.source_pdf_path = sourcePdfPath;
+      }
 
       // Pastikan XSRF-TOKEN cookie selalu fresh sebelum POST (Sanctum stateful)
       const xsrfToken = await refreshCsrfCookie();
@@ -379,7 +388,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
               {file && !uploading && (
                 <button
                   type="button"
-                  onClick={() => { setFile(null); setStatus(null); setErrorMessage(null); setResult(null); setEditableResult(null); }}
+                  onClick={() => { setFile(null); setStatus(null); setErrorMessage(null); setResult(null); setEditableResult(null); setSourcePdfPath(null); }}
                   className="rounded-lg border border-[#E3E6EA] bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-[#F8F9FB] hover:text-slate-900"
                 >
                   Reset

@@ -6,6 +6,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use PDF; // Barryvdh\DomPDF\Facade\Pdf
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class DocumentSigningService
@@ -51,7 +52,23 @@ class DocumentSigningService
     }
 
     /**
-     * Generate PDF resmi bertanda tangan digital jika semua approver_line sudah approved.
+     * Build verify URL untuk approver line (untuk dikirim ke Python stamper).
+     */
+    public function buildVerifyUrl(string $documentType, $documentId, $approverLine): string
+    {
+        $token = $this->generateVerifyToken($approverLine);
+        $appUrl = rtrim(config('app.url', 'http://127.0.0.1:8000'), '/');
+        return "{$appUrl}/verify/{$documentType}/{$documentId}/{$approverLine->id}?token={$token}";
+    }
+
+    /**
+     * Generate PDF resmi bertanda tangan digital.
+     * 
+     * Untuk dokumen dengan source_pdf_path (PDF asli tersimpan):
+     *   → Stamp PDF asli menggunakan Python microservice
+     * 
+     * Untuk dokumen tanpa source_pdf_path (legacy/fallback):
+     *   → Generate ulang dari Blade template (cara lama)
      */
     public function generateSignedPdf(string $documentType, $document): ?string
     {
@@ -79,23 +96,111 @@ class DocumentSigningService
             $approvers = $document->approverLines()->with('approver')->where('status', 'approved')->get();
         }
 
-        // Siapkan QR Code data URI untuk setiap approver yang approved
+        // Siapkan data approver
         $signedApprovers = [];
         foreach ($approvers as $line) {
+            $verifyUrl = $this->buildVerifyUrl($documentType, $document->id, $line);
             $qrBase64 = $this->generateQrForApprover($documentType, $document->id, $line);
             
             $approverUser = $line->approver;
             $signedApprovers[] = [
-                'line_id'      => $line->id,
-                'role'         => $line->role ?? 'Approver',
-                'name'         => $approverUser->name ?? 'User #' . $line->approver_id,
-                'jabatan'      => $approverUser->role ?? $approverUser->unit_nama ?? 'Pejabat Berwenang',
-                'signed_at'    => $line->signed_at ? \Carbon\Carbon::parse($line->signed_at)->format('d/m/Y H:i') : now()->format('d/m/Y H:i'),
+                'line_id'        => $line->id,
+                'role'           => $line->role ?? 'Approver',
+                'name'           => $approverUser->name ?? 'User #' . $line->approver_id,
+                'jabatan'        => $approverUser->role ?? $approverUser->unit_nama ?? 'Pejabat Berwenang',
+                'signed_at'      => $line->signed_at ? \Carbon\Carbon::parse($line->signed_at)->format('d/m/Y H:i') : now()->format('d/m/Y H:i'),
                 'qr_code_base64' => $qrBase64,
-                'verify_url'   => url("/verify/{$documentType}/{$document->id}/{$line->id}?token={$line->verify_token}"),
+                'verify_url'     => $verifyUrl,
             ];
         }
 
+        // ======================================================================
+        // STRATEGI: Jika ada source_pdf_path → STAMP PDF asli via Python service
+        //           Jika tidak → fallback ke Blade template (cara lama)
+        // ======================================================================
+        $hasSourcePdf = !empty($document->source_pdf_path);
+        
+        if ($hasSourcePdf && $documentType === 'ppab') {
+            $filePath = $this->stampSourcePdf($documentType, $document, $signedApprovers);
+            if ($filePath) {
+                return $filePath;
+            }
+            // Jika stamp gagal, fallback ke cara lama
+            Log::warning("[DocumentSigning] Stamp PDF gagal untuk {$documentType}#{$document->id}, fallback ke Blade template.");
+        }
+
+        // === FALLBACK: Generate dari Blade template (cara lama) ===
+        return $this->generateFromBlade($documentType, $document, $signedApprovers);
+    }
+
+    /**
+     * Stamp PDF asli menggunakan Python microservice.
+     */
+    protected function stampSourcePdf(string $documentType, $document, array $signedApprovers): ?string
+    {
+        $sourcePdfFullPath = storage_path('app/' . $document->source_pdf_path);
+        
+        if (!file_exists($sourcePdfFullPath)) {
+            Log::error("[DocumentSigning] Source PDF tidak ditemukan: {$sourcePdfFullPath}");
+            return null;
+        }
+
+        // Siapkan data approver untuk Python stamper
+        $approversForStamper = array_map(function ($a) {
+            return [
+                'role'       => $a['role'],
+                'name'       => $a['name'],
+                'jabatan'    => $a['jabatan'],
+                'signed_at'  => $a['signed_at'],
+                'verify_url' => $a['verify_url'],
+            ];
+        }, $signedApprovers);
+
+        $pythonApiUrl = rtrim(env('PYTHON_API_URL', 'http://127.0.0.1:8001'), '/');
+        $stampEndpoint = "{$pythonApiUrl}/stamp-pdf";
+
+        try {
+            $response = Http::timeout(30)
+                ->attach('file', file_get_contents($sourcePdfFullPath), basename($sourcePdfFullPath))
+                ->post($stampEndpoint, [
+                    'approvers_json' => json_encode($approversForStamper),
+                ]);
+
+            if (!$response->successful()) {
+                Log::error("[DocumentSigning] Python stamp API error: " . $response->body());
+                return null;
+            }
+
+            // Simpan PDF yang sudah di-stamp
+            $dirPath = storage_path('app/signed-documents');
+            if (!file_exists($dirPath)) {
+                mkdir($dirPath, 0755, true);
+            }
+
+            $filename = "{$documentType}_{$document->id}_signed.pdf";
+            $fullPath = "{$dirPath}/{$filename}";
+            
+            file_put_contents($fullPath, $response->body());
+
+            // Update path di database dokumen
+            $relativePath = "signed-documents/{$filename}";
+            $document->signed_pdf_path = $relativePath;
+            $document->save();
+
+            Log::info("[DocumentSigning] PDF berhasil di-stamp: {$fullPath}");
+            return $fullPath;
+
+        } catch (\Exception $e) {
+            Log::error("[DocumentSigning] Gagal memanggil Python stamp API: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Generate PDF dari Blade template (cara lama / fallback).
+     */
+    protected function generateFromBlade(string $documentType, $document, array $signedApprovers): ?string
+    {
         // Pilih Blade view berdasarkan documentType
         $viewName = "pdf.{$documentType}";
         if ($documentType === 'fs') {

@@ -14,7 +14,8 @@ class Ppab extends Model
     protected $fillable = [
         'user_id',
         'deskripsi',
-        'nomor_ppab'
+        'nomor_ppab',
+        'source_pdf_path',
     ];
 
     public function user()
