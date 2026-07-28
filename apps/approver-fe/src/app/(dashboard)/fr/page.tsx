@@ -36,7 +36,6 @@ export default function FrListPage() {
         { key: "requester_name", label: "Pemohon" },
         { key: "kategori_fr_name", label: "Kategori" },
         { key: "request_date_time", label: "Tanggal Request", type: "datetime" },
-        { key: "status", label: "Status" },
         { key: "keterangan", label: "Keterangan", defaultValue: "-" },
       ]}
       rows={rows}
