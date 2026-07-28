@@ -86,6 +86,11 @@ class FrController extends Controller
             'items.*.taxes' => 'nullable|array',
             'items.*.taxes.*.tax_id' => 'required|integer|exists:tax,id',
             'items.*.taxes.*.value' => 'required|numeric',
+            'approver_lines' => 'required|array|min:1',
+            'approver_lines.*.employee_id' => 'required|string',
+            'approver_lines.*.role' => 'required|string|in:issued_by,checked_by,approved_by,approved_by_atasan',
+            'approver_lines.*.name' => 'nullable|string',
+            'approver_lines.*.email' => 'nullable|string',
         ]);
 
         $userId = auth()->id();
@@ -96,14 +101,14 @@ class FrController extends Controller
             ], 401);
         }
 
-        $kategori = KategoriFr::with('approverKategoriFr')->findOrFail($data['kategori_fr_id']);
+        $kategori = KategoriFr::findOrFail($data['kategori_fr_id']);
 
         $fr = DB::transaction(function () use ($data, $userId, $kategori) {
             $status = $data['status'] ?? 'submitted';
 
             $fr = Fr::create([
                 'requester_id' => $userId,
-                'seksi_id' => $kategori->seksi_id,
+                'seksi_id' => null,
                 'kategori_fr_id' => $kategori->id,
                 'currency' => $data['currency'] ?? 'IDR',
                 'request_date_time' => now(),
@@ -142,14 +147,20 @@ class FrController extends Controller
                 }
             }
 
-            foreach ($kategori->approverKategoriFr as $approverKat) {
+            foreach ($data['approver_lines'] as $app) {
+                $userModel = $this->getOrCreateUser($app);
                 $fr->approvers()->create([
-                    'approver_id' => $approverKat->user_id,
-                    'role' => $approverKat->role,
+                    'approver_id' => $userModel->id,
+                    'role' => $app['role'],
                     'status' => 'pending',
                     'update_date_time' => null,
                 ]);
             }
+
+            // Sync physical document status to database based on new lines
+            $totalLines = count($data['approver_lines']);
+            $fr->status = $totalLines > 0 ? 'pending' : 'approved';
+            $fr->save();
 
             return $fr->load('itemLines.itemLineTaxes', 'approvers.approver');
         });
@@ -158,6 +169,28 @@ class FrController extends Controller
             'success' => true,
             'data' => $fr,
         ], 201);
+    }
+
+    private function getOrCreateUser($approverData)
+    {
+        if (!empty($approverData['employee_id'])) {
+            $user = \App\Models\User::where('employee_id', $approverData['employee_id'])->first();
+            if ($user) {
+                return $user;
+            }
+        }
+
+        $email = $approverData['email'] ?? ($approverData['employee_id'] . '@inl.co.id');
+        
+        return \App\Models\User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => $approverData['name'] ?? 'Approver',
+                'employee_id' => $approverData['employee_id'] ?? null,
+                'role' => $approverData['role'] ?? null,
+                'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+            ]
+        );
     }
 
     public function destroy($id)

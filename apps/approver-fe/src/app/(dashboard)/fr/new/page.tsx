@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Save, Send } from "lucide-react";
 import { refreshCsrfCookie } from "@/lib/csrf";
+import SsoUserPicker from "@/components/SsoUserPicker";
+import { approverPayloadFromSelection } from "@/lib/employees";
 
 interface Category {
   id: number;
@@ -87,6 +89,11 @@ export default function NewFrPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [issuedBy, setIssuedBy] = useState<any>(null);
+  const [checkedBy, setCheckedBy] = useState<any>(null);
+  const [approvedBy, setApprovedBy] = useState<any>(null);
+  const [approvedByAtasan, setApprovedByAtasan] = useState<any>(null);
+
   useEffect(() => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -169,6 +176,10 @@ export default function NewFrPage() {
       setErrorMsg("Semua item baris harus mengisi deskripsi");
       return;
     }
+    if (!issuedBy && !checkedBy && !approvedBy && !approvedByAtasan) {
+      setErrorMsg("Minimal 1 dari 4 slot approval roles harus diisi.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -189,6 +200,24 @@ export default function NewFrPage() {
         };
       });
 
+      const approverLines: any[] = [];
+      if (issuedBy) {
+        const p = approverPayloadFromSelection(issuedBy);
+        if (p) approverLines.push({ ...p, role: "issued_by" });
+      }
+      if (checkedBy) {
+        const p = approverPayloadFromSelection(checkedBy);
+        if (p) approverLines.push({ ...p, role: "checked_by" });
+      }
+      if (approvedBy) {
+        const p = approverPayloadFromSelection(approvedBy);
+        if (p) approverLines.push({ ...p, role: "approved_by" });
+      }
+      if (approvedByAtasan) {
+        const p = approverPayloadFromSelection(approvedByAtasan);
+        if (p) approverLines.push({ ...p, role: "approved_by_atasan" });
+      }
+
       const res = await fetch("/api/fr", {
         method: "POST",
         headers: {
@@ -204,6 +233,7 @@ export default function NewFrPage() {
           keterangan,
           status: submitStatus,
           items: payloadItems,
+          approver_lines: approverLines,
         }),
       });
 
@@ -537,6 +567,72 @@ export default function NewFrPage() {
               <span className="text-xl font-bold font-mono text-[#1F3A5F]">
                 {fmt(grandTotal, currency)}
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Approval Roles */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide border-b pb-2">
+              Approval Roles (Persetujuan)
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Pilih minimal 1 approver untuk memproses pengajuan ini. Hanya pegawai dari seksi/departemen Anda yang akan ditampilkan.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Slot 1: Issued By */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Issued By
+              </label>
+              <SsoUserPicker
+                value={issuedBy}
+                onChange={setIssuedBy}
+                placeholder="Pilih Pembuat Pengajuan..."
+                filterOwnUnit={true}
+              />
+            </div>
+
+            {/* Slot 2: Checked By */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Checked By
+              </label>
+              <SsoUserPicker
+                value={checkedBy}
+                onChange={setCheckedBy}
+                placeholder="Pilih Pemeriksa Dokumen..."
+                filterOwnUnit={true}
+              />
+            </div>
+
+            {/* Slot 3: Approved By */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Approved By
+              </label>
+              <SsoUserPicker
+                value={approvedBy}
+                onChange={setApprovedBy}
+                placeholder="Pilih Pemberi Persetujuan..."
+                filterOwnUnit={true}
+              />
+            </div>
+
+            {/* Slot 4: Approved By Atasan */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Approved By Atasan
+              </label>
+              <SsoUserPicker
+                value={approvedByAtasan}
+                onChange={setApprovedByAtasan}
+                placeholder="Pilih Atasan Tertinggi..."
+                filterOwnUnit={true}
+              />
             </div>
           </div>
         </div>

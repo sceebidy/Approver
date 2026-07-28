@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { LayoutGrid, ClipboardList, FileText, CheckCircle2, Wallet, User, LogOut, Menu, X, ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { LayoutGrid, ClipboardList, FileText, CheckCircle2, Wallet, User, LogOut, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 function NavItem({ icon: Icon, label, href, onClick, isCollapsed }: { icon: LucideIcon; label: string; href: string; onClick?: () => void; isCollapsed?: boolean }) {
@@ -145,15 +145,6 @@ export default function Sidebar() {
         </div>
         <NavItem icon={Wallet} label="Fund Request" href="/fr" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
         <NavItem icon={Wallet} label="Fund Settlement" href="/fs" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
-
-        {user?.role === "super_admin" && (
-          <>
-            <div className={`pt-5 pb-2 ${collapsed ? "px-0 text-center" : "px-3"} text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]`}>
-              {collapsed ? "..." : "Admin"}
-            </div>
-            <NavItem icon={Settings} label="Pengaturan Approval" href="/admin/approver-kategori-fr" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
-          </>
-        )}
       </nav>
 
       {/* Footer / Profile */}

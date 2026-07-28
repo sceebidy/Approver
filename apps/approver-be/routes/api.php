@@ -82,10 +82,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mis/{id}/signed-pdf',  [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'mis');
     Route::get('/fr/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'fr');
 
-    // Admin - FR Approver Mapping settings
-    Route::get('/admin/approver-kategori-fr', [ApproverKategoriFrController::class, 'index']);
-    Route::put('/admin/approver-kategori-fr/{kategoriId}', [ApproverKategoriFrController::class, 'update']);
-    Route::get('/admin/users', [ApproverKategoriFrController::class, 'users']);
+    // Admin - FR Approver Mapping settings (deactivated - mapping is now manual per submission)
+    // Route::get('/admin/approver-kategori-fr', [ApproverKategoriFrController::class, 'index']);
+    // Route::put('/admin/approver-kategori-fr/{kategoriId}', [ApproverKategoriFrController::class, 'update']);
+    // Route::get('/admin/users', [ApproverKategoriFrController::class, 'users']);
 });
 
 // Existing public routes
