@@ -15,19 +15,35 @@ class FrController extends Controller
         $items = Fr::with('requester:id,name', 'kategoriFr:id,nama', 'approvers')
             ->latest()
             ->get()
-            ->map(fn($f) => [
-                'id'                => $f->id,
-                'number_fr'         => $f->number_fr,
-                'requester_id'      => $f->requester_id,
-                'requester_name'    => $f->requester?->name,
-                'kategori_fr_id'    => $f->kategori_fr_id,
-                'kategori_fr_name'  => $f->kategoriFr?->nama,
-                'request_date_time' => $f->request_date_time,
-                'status'            => $f->status ?? 'pending',
-                'keterangan'        => $f->keterangan,
-                'created_at'        => $f->created_at,
-                'can_cancel'        => !$f->approvers->contains('status', 'approved'),
-            ]);
+            ->map(function($f) {
+                $approverLines = $f->approvers;
+                $totalLines = $approverLines->count();
+                $approvedCount = $approverLines->where('status', 'approved')->count();
+                $rejectedCount = $approverLines->where('status', 'rejected')->count();
+
+                $status = 'pending';
+                if ($rejectedCount > 0) {
+                    $status = 'rejected';
+                } elseif ($totalLines > 0 && $approvedCount === $totalLines) {
+                    $status = 'approved';
+                } elseif ($f->status === 'draft') {
+                    $status = 'draft';
+                }
+
+                return [
+                    'id'                => $f->id,
+                    'number_fr'         => $f->number_fr,
+                    'requester_id'      => $f->requester_id,
+                    'requester_name'    => $f->requester?->name,
+                    'kategori_fr_id'    => $f->kategori_fr_id,
+                    'kategori_fr_name'  => $f->kategoriFr?->nama,
+                    'request_date_time' => $f->request_date_time,
+                    'status'            => $status,
+                    'keterangan'        => $f->keterangan,
+                    'created_at'        => $f->created_at,
+                    'can_cancel'        => !$approverLines->contains('status', 'approved'),
+                ];
+            });
 
         return response()->json(['success' => true, 'data' => $items]);
     }

@@ -314,23 +314,36 @@ class SubmissionController extends Controller
             $model->save();
 
             // Cek apakah SEMUA approver_line untuk dokumen ini sudah approved
-            if ($status === 'approved') {
-                $approverLines = collect();
-                if ($type === 'fs') {
-                    $approverLines = \App\Models\FsApprover::where('fs_id', $document->id)->lockForUpdate()->get();
-                } elseif ($type === 'fr') {
-                    $approverLines = \App\Models\FrApprover::where('fr_id', $document->id)->lockForUpdate()->get();
-                } elseif ($type === 'ppab') {
-                    $approverLines = \App\Models\PpabApproverLine::where('ppab_id', $document->id)->lockForUpdate()->get();
-                } elseif ($type === 'po') {
-                    $approverLines = \App\Models\PoApproverLine::where('po_id', $document->id)->lockForUpdate()->get();
-                } elseif ($type === 'mis') {
-                    $approverLines = \App\Models\MisApproverLine::where('mis_id', $document->id)->lockForUpdate()->get();
+            $approverLines = collect();
+            if ($type === 'fs') {
+                $approverLines = \App\Models\FsApprover::where('fs_id', $document->id)->lockForUpdate()->get();
+            } elseif ($type === 'fr') {
+                $approverLines = \App\Models\FrApprover::where('fr_id', $document->id)->lockForUpdate()->get();
+            } elseif ($type === 'ppab') {
+                $approverLines = \App\Models\PpabApproverLine::where('ppab_id', $document->id)->lockForUpdate()->get();
+            } elseif ($type === 'po') {
+                $approverLines = \App\Models\PoApproverLine::where('po_id', $document->id)->lockForUpdate()->get();
+            } elseif ($type === 'mis') {
+                $approverLines = \App\Models\MisApproverLine::where('mis_id', $document->id)->lockForUpdate()->get();
+            }
+
+            $totalLines    = $approverLines->count();
+            $approvedLines = $approverLines->where('status', 'approved')->count();
+            $rejectedLines = $approverLines->where('status', 'rejected')->count();
+
+            // Sinkronisasi status fisik ke database untuk FR dan FS jika ada
+            if ($type === 'fs' || $type === 'fr') {
+                if ($rejectedLines > 0) {
+                    $document->status = 'rejected';
+                } elseif ($totalLines > 0 && $approvedLines === $totalLines) {
+                    $document->status = 'approved';
+                } else {
+                    $document->status = 'pending';
                 }
+                $document->save();
+            }
 
-                $totalLines    = $approverLines->count();
-                $approvedLines = $approverLines->where('status', 'approved')->count();
-
+            if ($status === 'approved') {
                 if ($totalLines > 0 && $totalLines === $approvedLines && empty($document->signed_pdf_path)) {
                     // Semua approver sudah menyetujui & PDF belum pernah di-generate
                     // Set flag — generateSignedPdf() dipanggil di LUAR transaction (heavy I/O)
