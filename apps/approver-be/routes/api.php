@@ -24,6 +24,7 @@ use App\Http\Controllers\MisController;
 use App\Http\Controllers\FrController;
 use App\Http\Controllers\FsController;
 use App\Http\Controllers\DocumentSigningController;
+use App\Http\Controllers\ApproverKategoriFrController;
 
 // Public Routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -80,6 +81,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/po/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'po');
     Route::get('/mis/{id}/signed-pdf',  [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'mis');
     Route::get('/fr/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'fr');
+
+    // Admin - FR Approver Mapping settings
+    Route::get('/admin/approver-kategori-fr', [ApproverKategoriFrController::class, 'index']);
+    Route::put('/admin/approver-kategori-fr/{kategoriId}', [ApproverKategoriFrController::class, 'update']);
+    Route::get('/admin/users', [ApproverKategoriFrController::class, 'users']);
 });
 
 // Existing public routes
