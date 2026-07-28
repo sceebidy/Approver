@@ -162,7 +162,19 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sourcePdfPath, setSourcePdfPath] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const unsupportedFieldKeys = new Set(['required_for', 'time', 'section']);
+
+  useEffect(() => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setFileUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setFileUrl(null);
+    }
+  }, [file]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -184,6 +196,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       setUploading(false);
       setSubmitting(false);
       setSourcePdfPath(null);
+      setShowPreview(false);
     }
   }, [isOpen]);
 
@@ -334,6 +347,18 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-[#E3E6EA] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {(uploading || submitting) && (
+          <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center text-center border border-[#E3E6EA]">
+              <Loader2 size={40} className="animate-spin text-[#1F3A5F] mb-4" />
+              <p className="text-[16px] font-bold text-slate-900">
+                {uploading ? "Mengekstrak Dokumen..." : "Menyimpan Pengajuan..."}
+              </p>
+              <p className="text-[13px] text-slate-500 mt-1">Mohon tunggu sebentar, proses ini memakan waktu.</p>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between border-b border-[#E3E6EA] px-6 py-4 bg-white/80 backdrop-blur-md sticky top-0 z-20">
           <div>
             <h3 className="text-lg font-bold text-slate-900">{title}</h3>
@@ -437,16 +462,28 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
 
           {result ? (
             <div className="rounded-xl border border-[#E3E6EA] bg-white shadow-sm ring-1 ring-slate-900/5 animate-in fade-in slide-in-from-bottom-4">
-              <div className="border-b border-[#E3E6EA] bg-[#F8F9FB] px-6 py-4 rounded-t-xl flex items-start sm:items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#1F3A5F] shadow-sm border border-[#E3E6EA]">
-                  <FileText size={20} />
+              <div className="border-b border-[#E3E6EA] bg-[#F8F9FB] px-6 py-4 rounded-t-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#1F3A5F] shadow-sm border border-[#E3E6EA]">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-base">Hasil Ekstraksi Data</h4>
+                    <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                      Mohon periksa kembali data di bawah. Klik field approver untuk memilih user dari SSO.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-base">Hasil Ekstraksi Data</h4>
-                  <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                    Mohon periksa kembali data di bawah. Klik field approver untuk memilih user dari SSO.
-                  </p>
-                </div>
+                {fileUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(true)}
+                    className="shrink-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#1F3A5F] bg-[#1F3A5F]/10 hover:bg-[#1F3A5F]/20 border border-[#1F3A5F]/20 rounded-lg shadow-sm transition-all duration-200"
+                  >
+                    <FileText size={16} />
+                    Lihat PDF Asli
+                  </button>
+                )}
               </div>
               <div className="p-6">
                 <EditableResultView value={editableResult} onChange={setEditableResult} unsupportedKeys={unsupportedFieldKeys} />
@@ -480,6 +517,34 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
           </button>
         </div>
       </div>
+
+      {/* Modal Preview PDF */}
+      {showPreview && fileUrl && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-6 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-6xl h-full max-h-[95vh] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[#E3E6EA] px-5 py-3 bg-[#F8F9FB]">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <FileText size={18} className="text-[#1F3A5F]" />
+                Preview Dokumen Asli
+              </h3>
+              <button 
+                onClick={() => setShowPreview(false)}
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+                title="Tutup Preview"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 w-full bg-slate-100">
+              <iframe 
+                src={fileUrl} 
+                className="w-full h-full border-none" 
+                title="PDF Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

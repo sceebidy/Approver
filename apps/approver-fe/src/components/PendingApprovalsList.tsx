@@ -4,11 +4,25 @@ import { useEffect, useState } from "react";
 import { CheckCircle, XCircle } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { getXsrfToken } from "@/lib/csrf";
+import ConfirmActionModal from "./ConfirmActionModal";
 
 export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id: number, type: string) => void }) {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: string;
+    id: number;
+    action: 'approve' | 'reject';
+    isLoading: boolean;
+  }>({
+    isOpen: false,
+    type: '',
+    id: 0,
+    action: 'approve',
+    isLoading: false
+  });
 
   const fetchApprovals = async () => {
     setLoading(true);
@@ -34,10 +48,22 @@ export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id:
     fetchApprovals();
   }, []);
 
-  const handleAction = async (type: string, id: number, action: 'approve' | 'reject') => {
+  const promptAction = (type: string, id: number, action: 'approve' | 'reject') => {
+    setConfirmModal({
+      isOpen: true,
+      type,
+      id,
+      action,
+      isLoading: false
+    });
+  };
+
+  const executeAction = async () => {
+    if (!confirmModal.isOpen) return;
+    setConfirmModal(prev => ({ ...prev, isLoading: true }));
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
-      const res = await fetch(`${apiUrl}/submissions/${type.toLowerCase()}/${id}/${action}`, {
+      const res = await fetch(`${apiUrl}/submissions/${confirmModal.type.toLowerCase()}/${confirmModal.id}/${confirmModal.action}`, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -54,12 +80,15 @@ export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id:
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setApprovals(prev => prev.filter(item => item.id !== id));
+        setApprovals(prev => prev.filter(item => item.id !== confirmModal.id));
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
       } else {
         alert(data.message || "Aksi gagal");
+        setConfirmModal(prev => ({ ...prev, isLoading: false }));
       }
     } catch (err) {
       alert(String(err));
+      setConfirmModal(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -96,7 +125,7 @@ export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id:
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleAction(item.type, item.id, 'approve');
+                promptAction(item.type, item.id, 'approve');
               }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-green-500 text-green-600 hover:bg-green-50 rounded-lg text-[12px] font-bold shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all"
             >
@@ -105,7 +134,7 @@ export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id:
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleAction(item.type, item.id, 'reject');
+                promptAction(item.type, item.id, 'reject');
               }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-500 text-red-600 hover:bg-red-50 rounded-lg text-[12px] font-bold shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all"
             >
@@ -114,6 +143,17 @@ export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id:
           </div>
         </div>
       ))}
+
+      <ConfirmActionModal
+        isOpen={confirmModal.isOpen}
+        title="Konfirmasi Persetujuan"
+        message={`Apakah Anda yakin ingin me${confirmModal.action === 'approve' ? 'nyetujui' : 'nolak'} pengajuan ini?`}
+        confirmText={confirmModal.action === 'approve' ? 'Ya, Setujui' : 'Ya, Tolak'}
+        isDestructive={confirmModal.action === 'reject'}
+        isLoading={confirmModal.isLoading}
+        onConfirm={executeAction}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

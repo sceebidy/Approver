@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { getXsrfToken } from "@/lib/csrf";
+import ConfirmActionModal from "./ConfirmActionModal";
 
 interface ApproverLine {
   id: number;
@@ -55,6 +56,15 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
   const [data, setData] = useState<DocDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    action: 'approve' | 'reject';
+    isLoading: boolean;
+  }>({
+    isOpen: false,
+    action: 'approve',
+    isLoading: false
+  });
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -93,17 +103,25 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
     }
   };
 
-  const handleAction = async (action: 'approve' | 'reject') => {
-    if (!data || !data.current_user_id) return;
+  const promptAction = (action: 'approve' | 'reject') => {
+    setConfirmModal({
+      isOpen: true,
+      action,
+      isLoading: false
+    });
+  };
+
+  const executeAction = async () => {
+    if (!data || !data.current_user_id || !confirmModal.isOpen) return;
     const actualApprovers = data.approverLines || data.approver_lines || [];
     const pendingLine = actualApprovers.find(l => l.approver_id === data.current_user_id && l.status === 'pending');
     if (!pendingLine) return;
 
-    if (!confirm(`Apakah Anda yakin ingin me${action === 'approve' ? 'nyetujui' : 'nolak'} dokumen ini?`)) return;
+    setConfirmModal(prev => ({ ...prev, isLoading: true }));
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
-      const res = await fetch(`${apiUrl}/submissions/${docType.toLowerCase()}/${pendingLine.id}/${action}`, {
+      const res = await fetch(`${apiUrl}/submissions/${docType.toLowerCase()}/${pendingLine.id}/${confirmModal.action}`, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -121,8 +139,10 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.message || 'Aksi gagal');
       fetchDetail(); // Refresh data to show updated status
+      setConfirmModal(prev => ({ ...prev, isOpen: false }));
     } catch (err: any) {
       alert(err.message);
+      setConfirmModal(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -373,13 +393,13 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
             {data && data.current_user_id && actualApprovers.some(l => l.approver_id === data.current_user_id && l.status === 'pending') && (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleAction('approve')}
+                  onClick={() => promptAction('approve')}
                   className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors"
                 >
                   <CheckCircle2 size={16} /> Setujui
                 </button>
                 <button
-                  onClick={() => handleAction('reject')}
+                  onClick={() => promptAction('reject')}
                   className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 transition-colors"
                 >
                   <XCircle size={16} /> Tolak
@@ -395,6 +415,17 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
           </button>
         </div>
       </div>
+
+      <ConfirmActionModal
+        isOpen={confirmModal.isOpen}
+        title="Konfirmasi Persetujuan"
+        message={`Apakah Anda yakin ingin me${confirmModal.action === 'approve' ? 'nyetujui' : 'nolak'} pengajuan ini?`}
+        confirmText={confirmModal.action === 'approve' ? 'Ya, Setujui' : 'Ya, Tolak'}
+        isDestructive={confirmModal.action === 'reject'}
+        isLoading={confirmModal.isLoading}
+        onConfirm={executeAction}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }
