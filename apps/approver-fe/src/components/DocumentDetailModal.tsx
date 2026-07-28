@@ -42,6 +42,16 @@ interface DocDetail {
   // MIS specific
   nomor_mis?: string;
   tgl_mis?: string;
+  // FR specific
+  number_fr?: string;
+  keterangan?: string;
+  kategori_fr_name?: string;
+  // FS specific
+  number_fs?: string;
+  balance?: number;
+  balance_due_to_employee?: number;
+  balance_due_to_company?: number;
+  fr_id?: number;
   current_user_id?: number;
 }
 
@@ -146,10 +156,37 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
 
   if (!isOpen) return null;
 
-  const title = `Detail ${docType.toUpperCase()}`;
-  const docNumber = data?.nomor_ppab || data?.nomor_po || data?.nomor_mis || (data as any)?.number_fr || (data as any)?.number_fs || '-';
+  const title = docType === 'ppab' 
+    ? 'Detail PPAB' 
+    : docType === 'po' 
+      ? 'Detail PO' 
+      : docType === 'mis' 
+        ? 'Detail MIS' 
+        : docType === 'fr' 
+          ? 'Detail Fund Requisition (FR)' 
+          : 'Detail Fund Settlement (FS)';
+
+  const docNumber = data?.nomor_ppab || data?.nomor_po || data?.nomor_mis || data?.number_fr || data?.number_fs || '-';
   const actualItems = data?.items || data?.itemLines || data?.item_lines || [];
   const actualApprovers = data?.approverLines || data?.approver_lines || (data as any)?.approvers || [];
+
+  const grandTotal = actualItems.reduce((acc, item) => {
+    if (docType === 'fs') {
+      return acc + (Number(item.total) || 0);
+    }
+    if (docType === 'fr') {
+      let taxSum = 0;
+      if (item.taxes && item.taxes.length > 0) {
+        taxSum = item.taxes.reduce((tAcc: number, t: any) => tAcc + (Number(t.value) || 0), 0);
+      }
+      return acc + (Number(item.sub_total) || 0) + taxSum;
+    }
+    return acc + (Number(item.qty) * Number(item.harga_satuan) || 0);
+  }, 0);
+
+  const userPendingLines = data && data.current_user_id
+    ? actualApprovers.filter((l: any) => l.approver_id === data.current_user_id && l.status === 'pending')
+    : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0" aria-modal role="dialog">
@@ -239,6 +276,20 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                         <span className="font-medium text-[#111827]">{data.tgl_mis ? new Date(data.tgl_mis).toLocaleDateString('id-ID', { dateStyle: 'long' }) : '-'}</span>
                       </>
                     )}
+                    {docType === 'fr' && (
+                      <>
+                        <span className="text-[#6B7280]">Kategori FR</span>
+                        <span className="font-medium text-[#111827]">{data.kategori_fr_name || '-'}</span>
+                        <span className="text-[#6B7280]">Keterangan</span>
+                        <span className="font-medium text-[#111827]">{data.keterangan || '-'}</span>
+                      </>
+                    )}
+                    {docType === 'fs' && (
+                      <>
+                        <span className="text-[#6B7280]">Ref. FR ID</span>
+                        <span className="font-medium text-[#111827] font-mono">{data.fr_id || '-'}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -250,60 +301,105 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                 </div>
                 {actualItems.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-[13px] text-left">
-                      <thead className="text-[11px] uppercase tracking-wide text-[#6B7280] border-b border-[#E3E6EA] bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-2.5 font-medium">No</th>
-                          <th className="px-4 py-2.5 font-medium">Deskripsi / Item</th>
-                          <th className="px-4 py-2.5 font-medium text-right">Qty</th>
-                          <th className="px-4 py-2.5 font-medium">Satuan</th>
-                          {docType !== 'mis' && (
-                            <>
-                              <th className="px-4 py-2.5 font-medium text-right">Harga Satuan</th>
-                              <th className="px-4 py-2.5 font-medium text-right">Total Harga</th>
-                            </>
-                          )}
-                          {docType === 'mis' && (
-                            <th className="px-4 py-2.5 font-medium">Remark</th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#E3E6EA]">
-                        {actualItems.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50">
-                            <td className="px-4 py-2.5 text-[#6B7280]">{idx + 1}</td>
-                            <td className="px-4 py-2.5 font-medium text-[#111827]">
-                              {item.deskripsi || item.desc || '-'}
-                              {item.spec && <div className="text-[11px] text-[#6B7280] mt-0.5 font-normal whitespace-pre-wrap">{item.spec}</div>}
-                              {item.line_specs && item.line_specs.length > 0 && (
-                                <ul className="mt-1 space-y-0.5 text-[11px] text-[#6B7280] font-normal list-disc list-inside">
-                                  {item.line_specs.map((spec: any, sIdx: number) => (
-                                    <li key={sIdx}>{spec.deskripsi}</li>
-                                  ))}
-                                </ul>
-                              )}
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-mono text-[12px]">{Number(item.qty).toLocaleString('id-ID')}</td>
-                            <td className="px-4 py-2.5 text-[#6B7280]">{item.satuan || '-'}</td>
+                    {docType === 'fr' ? (
+                      <table className="w-full text-[13px] text-left">
+                        <thead className="text-[11px] uppercase tracking-wide text-[#6B7280] border-b border-[#E3E6EA] bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-2.5 font-medium">No</th>
+                            <th className="px-4 py-2.5 font-medium">Deskripsi / Item</th>
+                            <th className="px-4 py-2.5 font-medium text-right">Subtotal</th>
+                            <th className="px-4 py-2.5 font-medium">Pajak</th>
+                            <th className="px-4 py-2.5 font-medium text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#E3E6EA]">
+                          {actualItems.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="px-4 py-2.5 text-[#6B7280]">{idx + 1}</td>
+                              <td className="px-4 py-2.5 font-medium text-[#111827]">{item.deskripsi}</td>
+                              <td className="px-4 py-2.5 text-right font-mono text-[12px]">Rp {Number(item.sub_total).toLocaleString('id-ID')}</td>
+                              <td className="px-4 py-2.5 text-[#6B7280]">
+                                {item.taxes && item.taxes.length > 0 ? (
+                                  <div className="flex flex-col gap-0.5 text-[11px]">
+                                    {item.taxes.map((t: any, tIdx: number) => (
+                                      <span key={tIdx} className={t.value < 0 ? 'text-rose-600 font-medium' : 'text-blue-600 font-medium'}>
+                                        {t.name} ({t.value < 0 ? '-' : '+'} Rp {Math.abs(t.value).toLocaleString('id-ID')})
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : '-'}
+                              </td>
+                              <td className="px-4 py-2.5 text-right font-mono text-[12px] font-semibold text-[#111827]">Rp {Number(item.total || item.sub_total).toLocaleString('id-ID')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : docType === 'fs' ? (
+                      <table className="w-full text-[13px] text-left">
+                        <thead className="text-[11px] uppercase tracking-wide text-[#6B7280] border-b border-[#E3E6EA] bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-2.5 font-medium">No</th>
+                            <th className="px-4 py-2.5 font-medium">Deskripsi Pengeluaran</th>
+                            <th className="px-4 py-2.5 font-medium text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#E3E6EA]">
+                          {actualItems.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="px-4 py-2.5 text-[#6B7280]">{idx + 1}</td>
+                              <td className="px-4 py-2.5 font-medium text-[#111827]">{item.deskripsi}</td>
+                              <td className="px-4 py-2.5 text-right font-mono text-[12px] font-semibold text-[#111827]">Rp {Number(item.total).toLocaleString('id-ID')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <table className="w-full text-[13px] text-left">
+                        <thead className="text-[11px] uppercase tracking-wide text-[#6B7280] border-b border-[#E3E6EA] bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-2.5 font-medium">No</th>
+                            <th className="px-4 py-2.5 font-medium">Deskripsi / Item</th>
+                            <th className="px-4 py-2.5 font-medium text-right">Qty</th>
+                            <th className="px-4 py-2.5 font-medium">Satuan</th>
                             {docType !== 'mis' && (
-                              <>
-                                <td className="px-4 py-2.5 text-right font-mono text-[12px] whitespace-nowrap">
-                                  {item.currency && item.currency !== 'IDR' ? `${item.currency} ` : 'Rp '}
-                                  {Number(item.harga_satuan).toLocaleString('id-ID')}
-                                </td>
-                                <td className="px-4 py-2.5 text-right font-mono text-[12px] whitespace-nowrap font-medium text-[#111827]">
-                                  {item.currency && item.currency !== 'IDR' ? `${item.currency} ` : 'Rp '}
-                                  {Number((item.qty || 0) * (item.harga_satuan || 0)).toLocaleString('id-ID')}
-                                </td>
-                              </>
+                              <th className="px-4 py-2.5 font-medium text-right">Harga Satuan</th>
                             )}
                             {docType === 'mis' && (
-                              <td className="px-4 py-2.5 text-[#6B7280]">{item.remark || '-'}</td>
+                              <th className="px-4 py-2.5 font-medium">Remark</th>
                             )}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-[#E3E6EA]">
+                          {actualItems.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="px-4 py-2.5 text-[#6B7280]">{idx + 1}</td>
+                              <td className="px-4 py-2.5 font-medium text-[#111827]">
+                                {item.deskripsi || item.desc || '-'}
+                                {item.spec && <div className="text-[11px] text-[#6B7280] mt-0.5 font-normal whitespace-pre-wrap">{item.spec}</div>}
+                                {item.line_specs && item.line_specs.length > 0 && (
+                                  <ul className="mt-1 space-y-0.5 text-[11px] text-[#6B7280] font-normal list-disc list-inside">
+                                    {item.line_specs.map((spec: any, sIdx: number) => (
+                                      <li key={sIdx}>{spec.deskripsi}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5 text-right font-mono text-[12px]">{Number(item.qty).toLocaleString('id-ID')}</td>
+                              <td className="px-4 py-2.5 text-[#6B7280]">{item.satuan || '-'}</td>
+                              {docType !== 'mis' && (
+                                <td className="px-4 py-2.5 text-right font-mono text-[12px] whitespace-nowrap">
+                                  {item.currency !== 'IDR' ? `${item.currency} ` : 'Rp '}
+                                  {Number(item.harga_satuan).toLocaleString('id-ID')}
+                                </td>
+                              )}
+                              {docType === 'mis' && (
+                                <td className="px-4 py-2.5 text-[#6B7280]">{item.remark || '-'}</td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 ) : (
                   <div className="p-8 text-center text-sm text-[#6B7280]">Tidak ada item ditemukan.</div>
@@ -363,6 +459,40 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                           )}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                )}
+                {/* Grand Total for FR/FS */}
+                {(docType === 'fr' || docType === 'fs') && (
+                  <div className="border-t border-[#E3E6EA] bg-[#F8F9FB] p-4 flex justify-end">
+                    <div className="text-right">
+                      <span className="text-[12px] text-[#6B7280] block uppercase font-medium">Grand Total</span>
+                      <span className="text-[16px] font-bold font-mono text-[#1F3A5F]">
+                        Rp {grandTotal.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {/* Balance & Refunds for FS */}
+                {docType === 'fs' && (
+                  <div className="border-t border-[#E3E6EA] p-4 bg-slate-50 flex justify-end">
+                    <div className="w-full sm:w-1/2 text-[13px] space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-[#6B7280]">Total Saldo (Balance)</span>
+                        <span className="font-semibold text-slate-800 font-mono">Rp {Number(data.balance || 0).toLocaleString('id-ID')}</span>
+                      </div>
+                      {Number(data.balance_due_to_employee || 0) > 0 && (
+                        <div className="flex justify-between text-amber-700">
+                          <span>Kurang Bayar ke Pegawai</span>
+                          <span className="font-semibold font-mono">Rp {Number(data.balance_due_to_employee).toLocaleString('id-ID')}</span>
+                        </div>
+                      )}
+                      {Number(data.balance_due_to_company || 0) > 0 && (
+                        <div className="flex justify-between text-blue-700">
+                          <span>Sisa Pengembalian ke Perusahaan</span>
+                          <span className="font-semibold font-mono">Rp {Number(data.balance_due_to_company).toLocaleString('id-ID')}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -444,11 +574,37 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
           ) : null}
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-[#E3E6EA] p-4 bg-[#F8F9FB] sm:rounded-b-lg flex items-center justify-end shrink-0">
+        <div className="border-t border-[#E3E6EA] p-4 bg-[#F8F9FB] sm:rounded-b-lg flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4">
+          <div className="flex-1">
+            {userPendingLines.length > 0 && (
+              <div className="flex flex-col gap-2 w-full max-w-xl">
+                {userPendingLines.map((line: any) => (
+                  <div key={line.id} className="flex items-center justify-between bg-white border border-[#E3E6EA] rounded-lg p-3 shadow-sm">
+                    <span className="text-[13px] font-medium text-[#374151]">
+                      Role Anda: <strong className="uppercase text-[#1F3A5F]">{line.role.replace(/_/g, ' ')}</strong>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => promptAction('approve', line.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-xs font-semibold rounded hover:bg-emerald-600 transition-colors"
+                      >
+                        <CheckCircle2 size={14} /> Setujui
+                      </button>
+                      <button
+                        onClick={() => promptAction('reject', line.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
+                      >
+                        <XCircle size={14} /> Tolak
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-white border border-[#D1D5DB] text-sm font-medium text-slate-700 rounded-md hover:bg-slate-50 transition-colors shadow-sm"
+            className="px-4 py-2 bg-white border border-[#D1D5DB] text-sm font-medium text-slate-700 rounded-md hover:bg-slate-50 transition-colors whitespace-nowrap self-end md:self-auto"
           >
             Tutup
           </button>

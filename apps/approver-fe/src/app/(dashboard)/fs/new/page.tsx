@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Save, Send, UserCheck } from "lucide-react";
 import { refreshCsrfCookie } from "@/lib/csrf";
+import SsoUserPicker from "@/components/SsoUserPicker";
+import { approverPayloadFromSelection } from "@/lib/employees";
 
 interface ApprovedFr {
   id: number;
@@ -42,10 +44,33 @@ export default function NewFsPage() {
     { id: "1", deskripsi: "", total: 0 },
   ]);
 
-  // Approver selection per role
-  const [atasanId, setAtasanId] = useState<string>("");
-  const [checkedbyId, setCheckedbyId] = useState<string>("");
-  const [approvedbyId, setApprovedbyId] = useState<string>("");
+  interface ApproverLineState {
+    id: string;
+    role: string;
+    person: any;
+  }
+
+  const [approverLines, setApproverLines] = useState<ApproverLineState[]>([
+    { id: "1", role: "Requested By", person: null },
+  ]);
+
+  const addApproverLine = () => {
+    setApproverLines((prev) => [
+      ...prev,
+      { id: Date.now().toString(), role: "Requested By", person: null },
+    ]);
+  };
+
+  const removeApproverLine = (id: string) => {
+    if (approverLines.length <= 1) return;
+    setApproverLines((prev) => prev.filter((l) => l.id !== id));
+  };
+
+  const updateApproverLine = (id: string, field: "role" | "person", value: any) => {
+    setApproverLines((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, [field]: value } : l))
+    );
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -131,15 +156,30 @@ export default function NewFsPage() {
       return;
     }
 
+    const hasIncomplete = approverLines.some((l) => (l.role.trim() && !l.person) || (!l.role.trim() && l.person));
+    if (hasIncomplete) {
+      setErrorMsg("Semua baris approver yang ditambahkan harus diisi lengkap (role dan nama orang).");
+      return;
+    }
+    const completeLines = approverLines.filter((l) => l.role.trim() && l.person);
+    if (completeLines.length === 0) {
+      setErrorMsg("Minimal 1 approver harus diisi lengkap (role & orang).");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const xsrfToken = await refreshCsrfCookie();
 
-      // Build approver lines
-      const approver_lines: { approver_id: number; role: string }[] = [];
-      if (atasanId) approver_lines.push({ approver_id: Number(atasanId), role: "atasan" });
-      if (checkedbyId) approver_lines.push({ approver_id: Number(checkedbyId), role: "checkedby" });
-      if (approvedbyId) approver_lines.push({ approver_id: Number(approvedbyId), role: "approvedby" });
+      const payloadApprovers = completeLines.map((l) => {
+        const p = approverPayloadFromSelection(l.person);
+        return {
+          employee_id: p?.employee_id || "",
+          name: p?.name || "",
+          email: p?.email || (l.person as any)?.email || "",
+          role: l.role,
+        };
+      });
 
       const res = await fetch("/api/fs", {
         method: "POST",
@@ -157,7 +197,7 @@ export default function NewFsPage() {
           balance_due_to_company: balanceDueToCompany,
           status: submitStatus,
           items: items.map((i) => ({ deskripsi: i.deskripsi, total: i.total })),
-          approver_lines,
+          approver_lines: payloadApprovers,
         }),
       });
 
@@ -347,58 +387,59 @@ export default function NewFsPage() {
 
         {/* Approver Lines */}
         <div className="space-y-4 pt-4 border-t border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-            <UserCheck size={16} /> Penentuan Approver FS
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center justify-between border-b pb-2">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Atasan</label>
-              <select
-                value={atasanId}
-                onChange={(e) => setAtasanId(e.target.value)}
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3A5F] bg-white"
-              >
-                <option value="">-- Pilih Atasan --</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.namaLengkap} {emp.jabatan ? `(${emp.jabatan})` : ""}
-                  </option>
-                ))}
-              </select>
+              <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+                <UserCheck size={16} /> Penentuan Approver FS
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">
+                Pilih minimal 1 approver untuk memproses pengajuan pertanggungjawaban ini.
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={addApproverLine}
+              className="flex items-center gap-1 text-xs text-[#1F3A5F] font-semibold hover:underline"
+            >
+              <Plus size={14} /> Tambah Approver
+            </button>
+          </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Checked By</label>
-              <select
-                value={checkedbyId}
-                onChange={(e) => setCheckedbyId(e.target.value)}
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3A5F] bg-white"
-              >
-                <option value="">-- Pilih Checked By --</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.namaLengkap} {emp.jabatan ? `(${emp.jabatan})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Approved By</label>
-              <select
-                value={approvedbyId}
-                onChange={(e) => setApprovedbyId(e.target.value)}
-                className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#1F3A5F] bg-white"
-              >
-                <option value="">-- Pilih Approved By --</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.namaLengkap} {emp.jabatan ? `(${emp.jabatan})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="space-y-4">
+            {approverLines.map((line, index) => (
+              <div key={line.id} className="flex flex-col md:flex-row md:items-end gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Role Approver #{index + 1}
+                  </label>
+                  <RolePicker
+                    value={line.role}
+                    onChange={(val) => updateApproverLine(line.id, "role", val)}
+                  />
+                </div>
+                <div className="flex-[2]">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Nama / Karyawan
+                  </label>
+                  <SsoUserPicker
+                    value={line.person}
+                    onChange={(val) => updateApproverLine(line.id, "person", val)}
+                    placeholder="Pilih Karyawan..."
+                    filterOwnUnit={true}
+                  />
+                </div>
+                {approverLines.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeApproverLine(line.id)}
+                    className="p-2 text-red-500 hover:text-red-700 rounded hover:bg-red-50 self-end md:mb-1"
+                    title="Hapus Approver"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -424,3 +465,72 @@ export default function NewFsPage() {
     </div>
   );
 }
+
+const RolePicker = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) => {
+  const defaultRoles = ["Requested By", "Checked By", "Approved By", "Approved By Atasan"];
+  const isCustom = value !== "" && !defaultRoles.includes(value);
+  const [customMode, setCustomMode] = useState(isCustom);
+  const [customValue, setCustomValue] = useState(isCustom ? value : "");
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === "custom") {
+      setCustomMode(true);
+      onChange("");
+    } else {
+      setCustomMode(false);
+      onChange(val);
+    }
+  };
+
+  const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCustomValue(val);
+    onChange(val);
+  };
+
+  if (customMode) {
+    return (
+      <div className="flex gap-2 w-full">
+        <input
+          type="text"
+          value={customValue}
+          onChange={handleCustomChange}
+          placeholder="Ketik role kustom..."
+          className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#1F3A5F] focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setCustomMode(false);
+            onChange(defaultRoles[0]);
+          }}
+          className="text-xs text-[#1F3A5F] hover:underline shrink-0"
+        >
+          Batal
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      value={value}
+      onChange={handleSelectChange}
+      className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#1F3A5F] focus:outline-none bg-white"
+    >
+      {defaultRoles.map((role) => (
+        <option key={role} value={role}>
+          {role}
+        </option>
+      ))}
+      <option value="custom">-- Ketik Bebas... --</option>
+    </select>
+  );
+};

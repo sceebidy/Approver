@@ -63,26 +63,27 @@ class KategoriFrSeeder extends Seeder
 
         // ── Tax ──────────────────────────────────────────────────────────────
         // Tipe pajak umum Indonesia — value dalam persen (%)
-        DB::table('tax')->insertOrIgnore([
+        $taxes = [
             [
                 'name'       => 'PPN 11%',
                 'value'      => 11.00,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
             [
                 'name'       => 'PPh 21 (5%)',
                 'value'      => 5.00,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
             [
                 'name'       => 'PPh 23 (2%)',
                 'value'      => 2.00,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
-        ]);
+        ];
+
+        foreach ($taxes as $tax) {
+            \App\Models\Tax::updateOrCreate(
+                ['name' => $tax['name']],
+                ['value' => $tax['value']]
+            );
+        }
 
         $this->command->info('✅  Tax seeded (PPN 11%, PPh 21, PPh 23).');
     }

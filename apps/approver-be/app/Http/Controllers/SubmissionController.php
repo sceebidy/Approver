@@ -232,7 +232,44 @@ class SubmissionController extends Controller
                 ];
             });
 
-        $allPending = collect()->merge($ppabPending)->merge($poPending)->merge($misPending)->sortByDesc('created_at')->values();
+        $frPending = \App\Models\FrApprover::with('fr.kategoriFr', 'fr.requester')
+            ->where('approver_id', $userId)
+            ->where('status', 'pending')
+            ->get()->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'document_id' => $item->fr_id,
+                    'type' => 'fr',
+                    'number' => $item->fr->number_fr ?? 'N/A',
+                    'description' => 'Kategori: ' . ($item->fr->kategoriFr->nama ?? '') . ' | Keterangan: ' . ($item->fr->keterangan ?? ''),
+                    'status' => $item->status,
+                    'created_at' => $item->created_at,
+                ];
+            });
+
+        $fsPending = \App\Models\FsApprover::with('fundSettlement.requester', 'fundSettlement.fr')
+            ->where('approver_id', $userId)
+            ->where('status', 'pending')
+            ->get()->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'document_id' => $item->fs_id,
+                    'type' => 'fs',
+                    'number' => $item->fundSettlement->number_fs ?? 'N/A',
+                    'description' => 'Balance: ' . number_format($item->fundSettlement->balance ?? 0) . ' | Keterangan: ' . ($item->fundSettlement->fr->keterangan ?? ''),
+                    'status' => $item->status,
+                    'created_at' => $item->created_at,
+                ];
+            });
+
+        $allPending = collect()
+            ->merge($ppabPending)
+            ->merge($poPending)
+            ->merge($misPending)
+            ->merge($frPending)
+            ->merge($fsPending)
+            ->sortByDesc('created_at')
+            ->values();
 
         return response()->json([
             'success' => true,

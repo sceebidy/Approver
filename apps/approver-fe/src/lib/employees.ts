@@ -36,6 +36,8 @@ export interface SelectedEmployee {
 
   extractedText?: string;
 
+  email?: string;
+
 }
 
 
@@ -206,6 +208,8 @@ export function toSelectedEmployee(emp: PortalEmployee, extractedText?: string):
 
     extractedText,
 
+    email: emp.email,
+
   };
 
 }
@@ -231,6 +235,8 @@ export function approverPayloadFromSelection(value: unknown): Record<string, str
       role: value.jabatan ?? "",
 
       jabatan: value.jabatan ?? "",
+
+      email: value.email ?? "",
 
     };
 

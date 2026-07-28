@@ -86,6 +86,8 @@ class DocumentSigningService
             $document->loadMissing(['itemLines', 'user']);
         } elseif ($documentType === 'fs' && method_exists($document, 'itemLines')) {
             $document->loadMissing(['itemLines', 'requester']);
+        } elseif ($documentType === 'fr' && method_exists($document, 'itemLines')) {
+            $document->loadMissing(['itemLines.itemLineTaxes.tax', 'requester', 'kategoriFr']);
         }
 
         // Tentukan relasi approver_line berdasarkan jenis dokumen
@@ -96,21 +98,26 @@ class DocumentSigningService
             $approvers = $document->approverLines()->with('approver')->where('status', 'approved')->get();
         }
 
-        // Urutkan approvers berdasarkan 4 role berjenjang eksplisit
-        $roleOrder = [
-            'issued_by'          => 1,
-            'checked_by'         => 2,
-            'checkedby'          => 2,
-            'approved_by'        => 3,
-            'approvedby'         => 3,
-            'approved_by_atasan' => 4,
-            'atasan'             => 4,
-        ];
+        // Urutkan approvers berdasarkan 4 role berjenjang eksplisit (hanya untuk dokumen non-FR/FS)
+        if ($documentType !== 'fs' && $documentType !== 'fr') {
+            $roleOrder = [
+                'issued_by'          => 1,
+                'checked_by'         => 2,
+                'checkedby'          => 2,
+                'approved_by'        => 3,
+                'approvedby'         => 3,
+                'approved_by_atasan' => 4,
+                'atasan'             => 4,
+            ];
 
-        $approvers = $approvers->sortBy(function ($line) use ($roleOrder) {
-            $roleKey = strtolower(trim($line->role ?? ''));
-            return $roleOrder[$roleKey] ?? 99;
-        })->values();
+            $approvers = $approvers->sortBy(function ($line) use ($roleOrder) {
+                $roleKey = strtolower(trim($line->role ?? ''));
+                return $roleOrder[$roleKey] ?? 99;
+            })->values();
+        } else {
+            // Untuk FR & FS, pertahankan urutan penyimpanan database (id ascending)
+            $approvers = $approvers->sortBy('id')->values();
+        }
 
         // Siapkan QR Code data URI untuk setiap approver yang approved
         $signedApprovers = [];

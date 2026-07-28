@@ -89,10 +89,33 @@ export default function NewFrPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [issuedBy, setIssuedBy] = useState<any>(null);
-  const [checkedBy, setCheckedBy] = useState<any>(null);
-  const [approvedBy, setApprovedBy] = useState<any>(null);
-  const [approvedByAtasan, setApprovedByAtasan] = useState<any>(null);
+  interface ApproverLineState {
+    id: string;
+    role: string;
+    person: any;
+  }
+
+  const [approverLines, setApproverLines] = useState<ApproverLineState[]>([
+    { id: "1", role: "Requested By", person: null },
+  ]);
+
+  const addApproverLine = () => {
+    setApproverLines((prev) => [
+      ...prev,
+      { id: Date.now().toString(), role: "Requested By", person: null },
+    ]);
+  };
+
+  const removeApproverLine = (id: string) => {
+    if (approverLines.length <= 1) return;
+    setApproverLines((prev) => prev.filter((l) => l.id !== id));
+  };
+
+  const updateApproverLine = (id: string, field: "role" | "person", value: any) => {
+    setApproverLines((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, [field]: value } : l))
+    );
+  };
 
   useEffect(() => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
@@ -176,8 +199,14 @@ export default function NewFrPage() {
       setErrorMsg("Semua item baris harus mengisi deskripsi");
       return;
     }
-    if (!issuedBy && !checkedBy && !approvedBy && !approvedByAtasan) {
-      setErrorMsg("Minimal 1 dari 4 slot approval roles harus diisi.");
+    const hasIncomplete = approverLines.some((l) => (l.role.trim() && !l.person) || (!l.role.trim() && l.person));
+    if (hasIncomplete) {
+      setErrorMsg("Semua baris approver yang ditambahkan harus diisi lengkap (role dan nama orang).");
+      return;
+    }
+    const completeLines = approverLines.filter((l) => l.role.trim() && l.person);
+    if (completeLines.length === 0) {
+      setErrorMsg("Minimal 1 approver harus diisi lengkap (role & orang).");
       return;
     }
 
@@ -188,9 +217,12 @@ export default function NewFrPage() {
       const payloadItems = items.map((item) => {
         const itemTaxes = item.selectedTaxIds.map((tId) => {
           const t = taxes.find((tx) => tx.id === tId);
+          const rate = t ? Number(t.value) : 0;
+          const isPph = t ? getTaxType(t.name) === "pph" : false;
+          const nominal = (Number(item.sub_total) || 0) * (rate / 100);
           return {
             tax_id: tId,
-            value: t ? Number(t.value) : 0,
+            value: isPph ? -nominal : nominal,
           };
         });
         return {
@@ -200,23 +232,15 @@ export default function NewFrPage() {
         };
       });
 
-      const approverLines: any[] = [];
-      if (issuedBy) {
-        const p = approverPayloadFromSelection(issuedBy);
-        if (p) approverLines.push({ ...p, role: "issued_by" });
-      }
-      if (checkedBy) {
-        const p = approverPayloadFromSelection(checkedBy);
-        if (p) approverLines.push({ ...p, role: "checked_by" });
-      }
-      if (approvedBy) {
-        const p = approverPayloadFromSelection(approvedBy);
-        if (p) approverLines.push({ ...p, role: "approved_by" });
-      }
-      if (approvedByAtasan) {
-        const p = approverPayloadFromSelection(approvedByAtasan);
-        if (p) approverLines.push({ ...p, role: "approved_by_atasan" });
-      }
+      const payloadApprovers = completeLines.map((l) => {
+        const p = approverPayloadFromSelection(l.person);
+        return {
+          employee_id: p?.employee_id || "",
+          name: p?.name || "",
+          email: p?.email || (l.person as any)?.email || "",
+          role: l.role,
+        };
+      });
 
       const res = await fetch("/api/fr", {
         method: "POST",
@@ -233,7 +257,7 @@ export default function NewFrPage() {
           keterangan,
           status: submitStatus,
           items: payloadItems,
-          approver_lines: approverLines,
+          approver_lines: payloadApprovers,
         }),
       });
 
@@ -573,67 +597,59 @@ export default function NewFrPage() {
 
         {/* Approval Roles */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide border-b pb-2">
-              Approval Roles (Persetujuan)
-            </h2>
-            <p className="text-xs text-gray-400 mt-1">
-              Pilih minimal 1 approver untuk memproses pengajuan ini. Hanya pegawai dari seksi/departemen Anda yang akan ditampilkan.
-            </p>
+          <div className="flex items-center justify-between border-b pb-2">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide">
+                Approval Roles (Persetujuan)
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">
+                Pilih minimal 1 approver untuk memproses pengajuan ini. Hanya pegawai dari seksi/departemen Anda yang akan ditampilkan.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addApproverLine}
+              className="flex items-center gap-1 text-xs text-[#1F3A5F] font-semibold hover:underline"
+            >
+              <Plus size={14} /> Tambah Approver
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Slot 1: Issued By */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Issued By
-              </label>
-              <SsoUserPicker
-                value={issuedBy}
-                onChange={setIssuedBy}
-                placeholder="Pilih Pembuat Pengajuan..."
-                filterOwnUnit={true}
-              />
-            </div>
-
-            {/* Slot 2: Checked By */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Checked By
-              </label>
-              <SsoUserPicker
-                value={checkedBy}
-                onChange={setCheckedBy}
-                placeholder="Pilih Pemeriksa Dokumen..."
-                filterOwnUnit={true}
-              />
-            </div>
-
-            {/* Slot 3: Approved By */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Approved By
-              </label>
-              <SsoUserPicker
-                value={approvedBy}
-                onChange={setApprovedBy}
-                placeholder="Pilih Pemberi Persetujuan..."
-                filterOwnUnit={true}
-              />
-            </div>
-
-            {/* Slot 4: Approved By Atasan */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Approved By Atasan
-              </label>
-              <SsoUserPicker
-                value={approvedByAtasan}
-                onChange={setApprovedByAtasan}
-                placeholder="Pilih Atasan Tertinggi..."
-                filterOwnUnit={true}
-              />
-            </div>
+          <div className="space-y-4">
+            {approverLines.map((line, index) => (
+              <div key={line.id} className="flex flex-col md:flex-row md:items-end gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Role Approver #{index + 1}
+                  </label>
+                  <RolePicker
+                    value={line.role}
+                    onChange={(val) => updateApproverLine(line.id, "role", val)}
+                  />
+                </div>
+                <div className="flex-[2]">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Nama / Karyawan
+                  </label>
+                  <SsoUserPicker
+                    value={line.person}
+                    onChange={(val) => updateApproverLine(line.id, "person", val)}
+                    placeholder="Pilih Karyawan..."
+                    filterOwnUnit={true}
+                  />
+                </div>
+                {approverLines.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeApproverLine(line.id)}
+                    className="p-2 text-red-500 hover:text-red-700 rounded hover:bg-red-50 self-end md:mb-1"
+                    title="Hapus Approver"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -659,3 +675,72 @@ export default function NewFrPage() {
     </div>
   );
 }
+
+const RolePicker = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) => {
+  const defaultRoles = ["Requested By", "Checked By", "Approved By", "Approved By Atasan"];
+  const isCustom = value !== "" && !defaultRoles.includes(value);
+  const [customMode, setCustomMode] = useState(isCustom);
+  const [customValue, setCustomValue] = useState(isCustom ? value : "");
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === "custom") {
+      setCustomMode(true);
+      onChange("");
+    } else {
+      setCustomMode(false);
+      onChange(val);
+    }
+  };
+
+  const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCustomValue(val);
+    onChange(val);
+  };
+
+  if (customMode) {
+    return (
+      <div className="flex gap-2 w-full">
+        <input
+          type="text"
+          value={customValue}
+          onChange={handleCustomChange}
+          placeholder="Ketik role kustom..."
+          className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#1F3A5F] focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setCustomMode(false);
+            onChange(defaultRoles[0]);
+          }}
+          className="text-xs text-[#1F3A5F] hover:underline shrink-0"
+        >
+          Batal
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      value={value}
+      onChange={handleSelectChange}
+      className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#1F3A5F] focus:outline-none bg-white"
+    >
+      {defaultRoles.map((role) => (
+        <option key={role} value={role}>
+          {role}
+        </option>
+      ))}
+      <option value="custom">-- Ketik Bebas... --</option>
+    </select>
+  );
+};

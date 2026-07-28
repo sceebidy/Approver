@@ -61,23 +61,64 @@ class FrController extends Controller
 
     public function show($id)
     {
-        $fr = Fr::with(['requester:id,name', 'kategoriFr:id,nama', 'itemLines.itemLineTaxes.tax', 'approvers.approver:id,name'])->findOrFail($id);
+        $fr = Fr::with([
+            'requester:id,name',
+            'kategoriFr:id,nama',
+            'itemLines.itemLineTaxes.tax',
+            'approvers.approver:id,name'
+        ])->findOrFail($id);
 
-        $user = auth()->user();
-        $isOwner = $fr->requester_id === $user->id;
-        $isApprover = $fr->approvers->contains('approver_id', $user->id);
+        $currentUser = auth()->user();
+        $isOwner = $fr->requester_id === $currentUser->id;
+        $isApprover = $fr->approvers->contains('approver_id', $currentUser->id);
 
-        if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
+        if (!$isOwner && !$isApprover && $currentUser->role !== 'super_admin') {
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
         }
 
-        $fr->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
-        $fr->can_cancel = !$fr->approvers->contains('status', 'approved');
-        $fr->current_user_id = $user->id;
-
         return response()->json([
             'success' => true,
-            'data' => $fr
+            'data' => [
+                'id' => $fr->id,
+                'number_fr' => $fr->number_fr,
+                'keterangan' => $fr->keterangan,
+                'currency' => $fr->currency,
+                'created_at' => $fr->created_at->toIso8601String(),
+                'status' => $fr->status,
+                'request_type' => $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya'),
+                'can_cancel' => !$fr->approvers->contains('status', 'approved'),
+                'user' => [
+                    'name' => $fr->requester?->name
+                ],
+                'kategori_fr_name' => $fr->kategoriFr?->nama,
+                'items' => $fr->itemLines->map(function($line) {
+                    return [
+                        'deskripsi' => $line->deskripsi,
+                        'sub_total' => $line->sub_total,
+                        'total' => $line->total,
+                        'taxes' => $line->itemLineTaxes->map(function($taxLine) {
+                            return [
+                                'name' => $taxLine->tax->name ?? 'Pajak',
+                                'value' => $taxLine->value
+                            ];
+                        })
+                    ];
+                }),
+                'approver_lines' => $fr->approvers->map(function($app) {
+                    return [
+                        'id' => $app->id,
+                        'approver_id' => $app->approver_id,
+                        'role' => $app->role,
+                        'status' => $app->status,
+                        'timestamp' => $app->update_date_time?->toIso8601String(),
+                        'approver' => [
+                            'id' => $app->approver?->id,
+                            'name' => $app->approver?->name,
+                        ]
+                    ];
+                }),
+                'current_user_id' => $currentUser->id
+            ]
         ]);
     }
 
@@ -121,7 +162,7 @@ class FrController extends Controller
             'items.*.taxes.*.value' => 'required|numeric',
             'approver_lines' => 'required|array|min:1',
             'approver_lines.*.employee_id' => 'required|string',
-            'approver_lines.*.role' => 'required|string|in:issued_by,checked_by,approved_by,approved_by_atasan',
+            'approver_lines.*.role' => 'required|string',
             'approver_lines.*.name' => 'nullable|string',
             'approver_lines.*.email' => 'nullable|string',
         ]);
@@ -247,5 +288,7 @@ class FrController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Pengajuan FR berhasil dihapus.']);
     }
+
+
 }
 

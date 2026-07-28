@@ -150,7 +150,7 @@ class DocumentSigningController extends Controller
         // Jika belum ada, cek apakah semua approval sudah approved
         if (!$filePath) {
             $approverLines = collect();
-            if ($documentType === 'fs') {
+            if ($documentType === 'fs' || $documentType === 'fr') {
                 $approverLines = $document->approvers;
             } elseif (method_exists($document, 'approverLines')) {
                 $approverLines = $document->approverLines;

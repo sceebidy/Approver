@@ -5,62 +5,72 @@
     <title>Fund Settlement - {{ $doc->number_fs ?? $doc->id }}</title>
     <style>
         @page {
-            margin: 25px 30px;
+            margin: 20px 25px;
         }
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 11px;
-            color: #1f2937;
-            line-height: 1.4;
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            color: #000000;
+            line-height: 1.25;
         }
-        .header-table {
+        table {
             width: 100%;
-            border-bottom: 2px solid #1f3a5f;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-        }
-        .company-name {
-            font-size: 16px;
-            font-weight: bold;
-            color: #1f3a5f;
-            text-transform: uppercase;
-        }
-        .doc-title {
-            font-size: 14px;
-            font-weight: bold;
-            text-align: right;
-            color: #374151;
-        }
-        .meta-table {
-            width: 100%;
-            margin-bottom: 15px;
             border-collapse: collapse;
         }
-        .meta-table td {
-            padding: 3px 0;
-            vertical-align: top;
+        .header-table, .header-table td {
+            border: 1px solid #000000;
         }
-        .meta-label {
-            width: 130px;
-            color: #6b7280;
-            font-weight: 500;
+        .meta-box-table td {
+            border-bottom: 1px solid #000000;
+            border-right: 1px solid #000000;
+            padding: 3px 5px;
+            color: #000000;
+        }
+        .meta-box-table tr:last-child td {
+            border-bottom: none;
+        }
+        .meta-box-table td:last-child {
+            border-right: none;
+        }
+        .company-title {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 0.3px;
+            color: #000000;
+        }
+        .title-container {
+            text-align: center;
+            margin: 8px 0;
+        }
+        .title-text {
+            font-size: 13px;
+            font-weight: bold;
+            color: #000000;
+        }
+        .info-table td {
+            padding: 1px 0;
+            vertical-align: top;
+            color: #000000;
         }
         .items-table {
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
+            border: 1px solid #000000;
+            margin-top: 8px;
         }
         .items-table th {
-            background-color: #1f3a5f;
-            color: #ffffff;
-            font-weight: 600;
-            text-align: left;
-            padding: 6px 8px;
-            font-size: 10.5px;
+            border: 1px solid #000000;
+            background-color: #f2f2f2;
+            font-weight: bold;
+            padding: 4px;
+            text-align: center;
+            color: #000000;
         }
         .items-table td {
-            border-bottom: 1px solid #e5e7eb;
-            padding: 6px 8px;
+            border: 1px solid #000000;
+            padding: 4px;
+            vertical-align: top;
+            color: #000000;
         }
         .text-right {
             text-align: right;
@@ -68,205 +78,238 @@
         .text-center {
             text-align: center;
         }
-        .balance-box {
-            background-color: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 4px;
-            padding: 10px;
-            margin-bottom: 20px;
+        .notes-section {
+            margin-top: 10px;
         }
-        .balance-table {
-            width: 100%;
-        }
-        .balance-table td {
-            padding: 3px 5px;
-        }
-        
-        /* Baris Tanda Tangan Digital */
-        .signatures-section {
-            margin-top: 25px;
-            page-break-inside: avoid;
-        }
-        .signatures-header {
-            font-size: 11px;
+        .notes-title {
             font-weight: bold;
-            color: #1f3a5f;
-            border-bottom: 1px solid #d1d5db;
-            padding-bottom: 4px;
-            margin-bottom: 12px;
+            text-decoration: underline;
+            margin-bottom: 2px;
+            color: #000000;
         }
-        .signatures-table {
+        .notes-content {
+            padding: 4px 0;
+            color: #000000;
+        }
+        .signature-table {
             width: 100%;
+            margin-top: 20px;
             border-collapse: collapse;
+            page-break-inside: avoid;
         }
         .signature-cell {
             vertical-align: top;
+            padding: 3px;
+        }
+        .signature-box {
             text-align: center;
-            padding: 5px;
-            width: 25%;
-        }
-        .signature-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 8px;
             background-color: #ffffff;
+            color: #000000;
         }
-        .role-title {
+        .role-label {
             font-weight: bold;
-            font-size: 10px;
-            color: #374151;
-            text-transform: uppercase;
-            margin-bottom: 6px;
+            font-size: 8.5px;
+            margin-bottom: 3px;
+            color: #000000;
         }
-        .qr-img {
-            width: 75px;
-            height: 75px;
-            margin: 0 auto;
-        }
-        .signed-notice {
-            font-size: 8px;
-            color: #059669;
-            font-weight: bold;
-            margin-top: 4px;
+        .qr-code-img {
+            width: 45px;
+            height: 45px;
+            margin: 2px auto;
+            display: block;
         }
         .signer-name {
-            font-size: 10px;
             font-weight: bold;
-            color: #111827;
-            margin-top: 4px;
-        }
-        .signer-title {
+            margin-top: 3px;
             font-size: 8.5px;
-            color: #6b7280;
+            color: #000000;
         }
-        .signed-date {
-            font-size: 8px;
-            color: #9ca3af;
-            margin-top: 2px;
+        .signer-dept {
+            font-size: 7.5px;
+            color: #000000;
+        }
+        .digital-sig-text {
+            font-size: 7px;
+            color: #000000;
+            font-style: italic;
+            font-weight: normal;
+            margin-top: 1px;
         }
     </style>
 </head>
 <body>
 
-    <!-- Header Perusahaan & Dokumen -->
+    <!-- 1. Header (Tabel 2 kolom kiri-kanan) -->
     <table class="header-table">
         <tr>
-            <td>
-                <div class="company-name">PT. Industri Nabati Lestari</div>
-                <div style="font-size: 9px; color: #6b7280;">Sistem Pengajuan & Pertanggungjawaban Digital</div>
+            <!-- Kiri atas: Logo + Info PT -->
+            <td style="width: 55%; padding: 6px; vertical-align: top; border-right: 1px solid #000000;">
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="width: 50px; vertical-align: top; padding-right: 6px;">
+                            @if(file_exists(public_path('logo.png')))
+                                <img src="{{ public_path('logo.png') }}" style="width: 42px; height: auto;" alt="INL Logo">
+                            @else
+                                <div style="width: 42px; height: 42px; border: 1px solid #ccc; text-align: center; line-height: 42px; font-size: 8px;">LOGO</div>
+                            @endif
+                        </td>
+                        <td style="vertical-align: top; padding-top: 1px;">
+                            <div class="company-title">PT. Industri Nabati Lestari</div>
+                            <div style="font-size: 8px; font-weight: bold; margin-top: 1px;">PABRIK MINYAK GORENG</div>
+                            <div style="font-size: 7px; color: #000000; margin-top: 3px; line-height: 1.3;">
+                                Kantor Pusat KAWASAN EKONOMI KHUSUS SEI MANGKEI JL. KELAPA SAWIT II<br>
+                                KAV 2-3 SEI MANGKEI BOSAR MALIGAS 21183
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td class="doc-title">
-                FUND SETTLEMENT (FS)<br>
-                <span style="font-size: 11px; font-weight: normal; color: #6b7280;">
-                    {{ $doc->number_fs ?? ('FS-' . $doc->id) }}
-                </span>
+            <!-- Kanan atas: Box dokumen info -->
+            <td style="width: 45%; vertical-align: top; padding: 0;">
+                <table class="meta-box-table" style="width: 100%;">
+                    <tr>
+                        <td style="width: 40%; font-weight: bold; background-color: #f2f2f2;">No. Dokumen</td>
+                        <td style="width: 60%;">INLHO/FSF-F/001</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; background-color: #f2f2f2;">Tgl. Berlaku</td>
+                        <td>12-11-2018</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; background-color: #f2f2f2;">No. Revisi</td>
+                        <td>00</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold; background-color: #f2f2f2;">Halaman</td>
+                        <td>1 dari 1</td>
+                    </tr>
+                </table>
             </td>
         </tr>
     </table>
 
-    <!-- Metadata Dokumen -->
-    <table class="meta-table">
+    <!-- Judul Tengah -->
+    <div class="title-container">
+        <span class="title-text">FUND SETTLEMENT FORM</span>
+    </div>
+
+    <!-- 2. Info Block -->
+    <table style="width: 100%;">
         <tr>
-            <td class="meta-label">Nomor Dokumen</td>
-            <td>: <strong>{{ $doc->number_fs ?? '-' }}</strong></td>
-            <td class="meta-label">Tanggal Request</td>
-            <td>: {{ $doc->requester_date_time ? \Carbon\Carbon::parse($doc->requester_date_time)->format('d F Y H:i') : '-' }}</td>
-        </tr>
-        <tr>
-            <td class="meta-label">Pemohon (Requester)</td>
-            <td>: {{ $doc->requester->name ?? 'N/A' }} ({{ $doc->requester->email ?? '-' }})</td>
-            <td class="meta-label">Ref. FR ID</td>
-            <td>: {{ $doc->fr_id ?? '-' }}</td>
-        </tr>
-        <tr>
-            <td class="meta-label">Status Dokumen</td>
-            <td>: <span style="color: #059669; font-weight: bold;">SELESAI / DISERTAI TANDA TANGAN DIGITAL</span></td>
-            <td class="meta-label">Dibuat Pada</td>
-            <td>: {{ $doc->created_at ? \Carbon\Carbon::parse($doc->created_at)->format('d F Y H:i') : '-' }}</td>
+            <!-- Rata Kiri -->
+            <td style="width: 60%; vertical-align: top;">
+                <table class="info-table" style="width: 100%;">
+                    <tr>
+                        <td style="width: 100px; font-weight: bold;">DATE</td>
+                        <td style="width: 10px;">:</td>
+                        <td>{{ $doc->requester_date_time ? \Carbon\Carbon::parse($doc->requester_date_time)->format('d/m/Y H:i:s') : ($doc->created_at ? \Carbon\Carbon::parse($doc->created_at)->format('d/m/Y H:i:s') : now()->format('d/m/Y H:i:s')) }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">REQUESTED BY</td>
+                        <td>:</td>
+                        <td>{{ $doc->requester->name ?? 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">DEPARTMENT</td>
+                        <td>:</td>
+                        <td>{{ $doc->requester->unit_nama ?? '-' }}</td>
+                    </tr>
+                </table>
+            </td>
+            <!-- Rata Kanan sejajar -->
+            <td style="width: 40%; vertical-align: top; text-align: right; font-weight: bold; font-size: 9px; padding-top: 2px;">
+                FORM NO: {{ $doc->number_fs ?? '-' }}
+            </td>
         </tr>
     </table>
 
-    <!-- Tabel Rincian Item Line -->
+    <!-- 3. Tabel Item -->
     <table class="items-table">
         <thead>
             <tr>
-                <th style="width: 30px;">#</th>
-                <th>Deskripsi Rincian Pengeluaran</th>
-                <th style="width: 100px;" class="text-right">Nominal (Rp)</th>
-                <th>Keterangan</th>
+                <th style="width: 25px;">NO</th>
+                <th>DESCRIPTION</th>
+                <th style="width: 105px;">SUB TOTAL</th>
+                <th style="width: 105px;">TOTAL</th>
             </tr>
         </thead>
         <tbody>
+            @php
+                $no = 1;
+                $grandTotal = 0;
+            @endphp
             @if(isset($doc->itemLines) && count($doc->itemLines) > 0)
-                @foreach($doc->itemLines as $index => $item)
+                @foreach($doc->itemLines as $item)
                     <tr>
-                        <td class="text-center">{{ $index + 1 }}</td>
-                        <td>{{ $item->description ?? $item->desc ?? '-' }}</td>
-                        <td class="text-right">{{ number_format($item->amount ?? $item->nominal ?? 0, 0, ',', '.') }}</td>
-                        <td>{{ $item->remark ?? '-' }}</td>
+                        <td class="text-center">{{ $no++ }}</td>
+                        <td>{{ $item->deskripsi }}</td>
+                        <td class="text-right">Rp {{ number_format($item->total, 0, '.', ',') }}</td>
+                        <td class="text-right">Rp {{ number_format($item->total, 0, '.', ',') }}</td>
                     </tr>
+                    @php
+                        $grandTotal += $item->total;
+                    @endphp
                 @endforeach
             @else
                 <tr>
-                    <td colspan="4" class="text-center" style="color: #9ca3af;">Tidak ada rincian item line.</td>
+                    <td colspan="4" class="text-center">Tidak ada data item line.</td>
                 </tr>
             @endif
+
+            <!-- Total Expenses & Balance Rows di dalam items-table -->
+            <tr style="font-weight: bold; background-color: #f2f2f2;">
+                <td colspan="2" class="text-right">Total Expenses</td>
+                <td class="text-right"></td>
+                <td class="text-right">Rp {{ number_format($grandTotal, 0, '.', ',') }}</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="text-right">Balance</td>
+                <td class="text-right"></td>
+                <td class="text-right">Rp {{ number_format($doc->balance ?? 0, 0, '.', ',') }}</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="text-right">Balance Due to Employee</td>
+                <td class="text-right"></td>
+                <td class="text-right">Rp {{ number_format($doc->balance_due_to_employee ?? 0, 0, '.', ',') }}</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="text-right">Balance due to Company</td>
+                <td class="text-right"></td>
+                <td class="text-right">Rp {{ number_format($doc->balance_due_to_company ?? 0, 0, '.', ',') }}</td>
+            </tr>
         </tbody>
     </table>
 
-    <!-- Rincian Balance -->
-    <div class="balance-box">
-        <table class="balance-table">
-            <tr>
-                <td style="font-weight: bold; width: 200px;">Total Saldo (Balance)</td>
-                <td class="text-right" style="font-weight: bold; font-size: 12px; color: #1f3a5f;">
-                    Rp {{ number_format($doc->balance ?? 0, 0, ',', '.') }}
-                </td>
-            </tr>
-            @if(($doc->balance_due_to_employee ?? 0) > 0)
-            <tr>
-                <td style="color: #d97706;">Kurang Bayar ke Pegawai (Due to Employee)</td>
-                <td class="text-right" style="color: #d97706; font-weight: 500;">
-                    Rp {{ number_format($doc->balance_due_to_employee, 0, ',', '.') }}
-                </td>
-            </tr>
-            @endif
-            @if(($doc->balance_due_to_company ?? 0) > 0)
-            <tr>
-                <td style="color: #2563eb;">Sisa Pengembalian ke Perusahaan (Due to Company)</td>
-                <td class="text-right" style="color: #2563eb; font-weight: 500;">
-                    Rp {{ number_format($doc->balance_due_to_company, 0, ',', '.') }}
-                </td>
-            </tr>
-            @endif
-        </table>
-    </div>
+    <!-- Notes Section -->
+    @if(!empty($doc->keterangan))
+        <div class="notes-section">
+            <div class="notes-title">Notes:</div>
+            <div class="notes-content">{{ $doc->keterangan }}</div>
+        </div>
+    @endif
 
-    <!-- Baris Tanda Tangan Digital Berjajar -->
-    <div class="signatures-section">
-        <div class="signatures-header">TANDA TANGAN ELEKTRONIK TERVERIFIKASI</div>
-        
-        <table class="signatures-table">
+    <!-- 5. Baris Tanda Tangan Dinamis -->
+    @if(isset($signedApprovers) && count($signedApprovers) > 0)
+        <table class="signature-table">
             <tr>
                 @foreach($signedApprovers as $approver)
-                    <td class="signature-cell">
-                        <div class="signature-card">
-                            <div class="role-title">{{ $approver['role'] }}</div>
-                            
+                    <td class="signature-cell" style="width: {{ 100 / count($signedApprovers) }}%;">
+                        <div class="signature-box">
+                            <div class="role-label">{{ $approver['role'] }}</div>
                             @if(!empty($approver['qr_code_base64']))
-                                <img src="{{ $approver['qr_code_base64'] }}" class="qr-img" alt="QR Code">
+                                <img src="{{ $approver['qr_code_base64'] }}" class="qr-code-img" alt="QR Code">
+                            @else
+                                <div style="height: 45px;"></div>
                             @endif
-                            
-                            <div class="signed-notice">Ditandatangani secara elektronik</div>
+                            <div class="digital-sig-text">Ditandatangani secara elektronik</div>
                             <div class="signer-name">{{ $approver['name'] }}</div>
-                            <div class="signer-title">{{ $approver['jabatan'] }}</div>
-                            <div class="signed-date">{{ $approver['signed_at'] }}</div>
+                            <div class="signer-dept">{{ $approver['jabatan'] }}</div>
                         </div>
                     </td>
                 @endforeach
             </tr>
         </table>
-    </div>
+    @endif
 
 </body>
 </html>
