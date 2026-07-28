@@ -43,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Submission routes
     Route::post('/submissions', [\App\Http\Controllers\SubmissionController::class, 'create']);
     Route::get('/submissions/pending', [\App\Http\Controllers\SubmissionController::class, 'pendingApprovals']);
+    Route::get('/submissions/recent', [\App\Http\Controllers\SubmissionController::class, 'recentDocuments']);
     Route::post('/submissions/{type}/{lineId}/approve', [\App\Http\Controllers\SubmissionController::class, 'approve']);
     Route::post('/submissions/{type}/{lineId}/reject', [\App\Http\Controllers\SubmissionController::class, 'reject']);
 
@@ -69,11 +70,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/fr/categories', [FrController::class, 'categories']);
     Route::get('/fr/approved-list', [FrController::class, 'approvedList']);
     Route::post('/fr', [FrController::class, 'store']);
+    Route::get('/fr/{id}', [FrController::class, 'show']);
     Route::delete('/fr/{id}', [FrController::class, 'destroy']);
 
     // FS
     Route::get('/fs', [FsController::class, 'index']);
     Route::post('/fs', [FsController::class, 'store']);
+    Route::get('/fs/{id}', [FsController::class, 'show']);
 
     // Signed PDF download (dokumen resmi bertanda tangan digital)
     Route::get('/fs/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'fs');

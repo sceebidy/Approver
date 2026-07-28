@@ -241,6 +241,114 @@ class SubmissionController extends Controller
     }
 
     /**
+     * Get recent documents related to the current user (owner or approver).
+     */
+    public function recentDocuments(Request $request)
+    {
+        $userId = $request->user()->id;
+
+        $ppabList = Ppab::with('approverLines')
+            ->where(function ($q) use ($userId) {
+                $q->where('user_id', $userId)
+                  ->orWhereHas('approverLines', fn($q2) => $q2->where('approver_id', $userId));
+            })
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn($p) => [
+                'id'          => $p->id,
+                'type'        => 'PPAB',
+                'number'      => $p->nomor_ppab,
+                'description' => $p->deskripsi,
+                'created_at'  => $p->created_at,
+                'status'      => $p->approverLines->contains('status', 'rejected') ? 'rejected' : ($p->approverLines->count() > 0 && $p->approverLines->where('status', 'approved')->count() === $p->approverLines->count() ? 'approved' : 'pending'),
+            ]);
+
+        $poList = Po::with('approverLines')
+            ->where(function ($q) use ($userId) {
+                $q->where('user_id', $userId)
+                  ->orWhereHas('approverLines', fn($q2) => $q2->where('approver_id', $userId));
+            })
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn($p) => [
+                'id'          => $p->id,
+                'type'        => 'PO',
+                'number'      => $p->nomor_po,
+                'description' => 'Vendor: ' . ($p->vendor ?? ''),
+                'created_at'  => $p->created_at,
+                'status'      => $p->approverLines->contains('status', 'rejected') ? 'rejected' : ($p->approverLines->count() > 0 && $p->approverLines->where('status', 'approved')->count() === $p->approverLines->count() ? 'approved' : 'pending'),
+            ]);
+
+        $misList = Mis::with('approverLines')
+            ->where(function ($q) use ($userId) {
+                $q->where('user_id', $userId)
+                  ->orWhereHas('approverLines', fn($q2) => $q2->where('approver_id', $userId));
+            })
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn($m) => [
+                'id'          => $m->id,
+                'type'        => 'MIS',
+                'number'      => $m->nomor_mis,
+                'description' => 'Tanggal MIS: ' . ($m->tgl_mis ?? ''),
+                'created_at'  => $m->created_at,
+                'status'      => $m->approverLines->contains('status', 'rejected') ? 'rejected' : ($m->approverLines->count() > 0 && $m->approverLines->where('status', 'approved')->count() === $m->approverLines->count() ? 'approved' : 'pending'),
+            ]);
+
+        $frList = \App\Models\Fr::with('approvers')
+            ->where(function ($q) use ($userId) {
+                $q->where('requester_id', $userId)
+                  ->orWhereHas('approvers', fn($q2) => $q2->where('approver_id', $userId));
+            })
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn($f) => [
+                'id'          => $f->id,
+                'type'        => 'FR',
+                'number'      => $f->number_fr,
+                'description' => $f->keterangan ?? 'Fund Request',
+                'created_at'  => $f->created_at,
+                'status'      => $f->status ?? 'pending',
+            ]);
+
+        $fsList = \App\Models\FundSettlement::with('approvers')
+            ->where(function ($q) use ($userId) {
+                $q->where('requester_id', $userId)
+                  ->orWhereHas('approvers', fn($q2) => $q2->where('approver_id', $userId));
+            })
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn($f) => [
+                'id'          => $f->id,
+                'type'        => 'FS',
+                'number'      => $f->number_fs,
+                'description' => 'Fund Settlement',
+                'created_at'  => $f->created_at,
+                'status'      => $f->status ?? 'pending',
+            ]);
+
+        $recent = collect()
+            ->concat($ppabList)
+            ->concat($poList)
+            ->concat($misList)
+            ->concat($frList)
+            ->concat($fsList)
+            ->sortByDesc('created_at')
+            ->take(10)
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $recent,
+        ]);
+    }
+
+    /**
      * Approve a document
      */
     public function approve(Request $request, $type, $lineId)

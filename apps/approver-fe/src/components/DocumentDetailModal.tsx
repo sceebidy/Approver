@@ -49,7 +49,7 @@ interface DocumentDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   docId: number | null;
-  docType: 'ppab' | 'po' | 'mis';
+  docType: 'ppab' | 'po' | 'mis' | 'fr' | 'fs';
 }
 
 export default function DocumentDetailModal({ isOpen, onClose, docId, docType }: DocumentDetailModalProps) {
@@ -130,28 +130,26 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
         credentials: "include"
       });
 
-      const contentType = res.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        const text = await res.text();
-        throw new Error(`Server mengembalikan respon non-JSON (${res.status}): ${text.slice(0, 150)}`);
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.message || `Gagal memproses persetujuan (${res.status})`);
       }
 
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.message || 'Aksi gagal');
-      fetchDetail(); // Refresh data to show updated status
-      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      // Refresh detail setelah berhasil
+      await fetchDetail();
+      setConfirmModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || "Gagal memproses tindakan.");
       setConfirmModal(prev => ({ ...prev, isLoading: false }));
     }
   };
 
   if (!isOpen) return null;
 
-  const title = docType === 'ppab' ? 'Detail PPAB' : docType === 'po' ? 'Detail PO' : 'Detail MIS';
-  const docNumber = data?.nomor_ppab || data?.nomor_po || data?.nomor_mis || '-';
+  const title = `Detail ${docType.toUpperCase()}`;
+  const docNumber = data?.nomor_ppab || data?.nomor_po || data?.nomor_mis || (data as any)?.number_fr || (data as any)?.number_fs || '-';
   const actualItems = data?.items || data?.itemLines || data?.item_lines || [];
-  const actualApprovers = data?.approverLines || data?.approver_lines || [];
+  const actualApprovers = data?.approverLines || data?.approver_lines || (data as any)?.approvers || [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0" aria-modal role="dialog">

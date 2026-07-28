@@ -11,10 +11,22 @@ class FsController extends Controller
 {
     public function index()
     {
-        $items = FundSettlement::with('requester:id,name')
-            ->latest()
-            ->get()
-            ->map(fn($f) => [
+        $user = auth()->user();
+        $query = FundSettlement::with('requester:id,name', 'approvers')->latest();
+
+        $showAll = request()->query('all') == '1' && $user->role === 'super_admin';
+        if (!$showAll) {
+            $query->where(function ($q) use ($user) {
+                $q->where('requester_id', $user->id)
+                  ->orWhereHas('approvers', function ($q2) use ($user) {
+                      $q2->where('approver_id', $user->id);
+                  });
+            });
+        }
+
+        $items = $query->get()->map(function ($f) use ($user) {
+            $approverLines = $f->approvers;
+            return [
                 'id'                      => $f->id,
                 'number_fs'               => $f->number_fs,
                 'fr_id'                   => $f->fr_id,
@@ -26,9 +38,33 @@ class FsController extends Controller
                 'balance_due_to_company'  => $f->balance_due_to_company,
                 'status'                  => $f->status ?? 'pending',
                 'created_at'              => $f->created_at,
-            ]);
+                'request_type'            => $f->requester_id === $user->id ? 'Pengajuan Saya' : ($approverLines->contains('approver_id', $user->id) ? 'Butuh Approval Anda' : 'Lainnya'),
+            ];
+        });
 
         return response()->json(['success' => true, 'data' => $items]);
+    }
+
+    public function show($id)
+    {
+        $fs = FundSettlement::with(['requester:id,name', 'itemLines', 'approvers.approver:id,name', 'fr'])->findOrFail($id);
+
+        $user = auth()->user();
+        $isOwner = $fs->requester_id === $user->id;
+        $isApprover = $fs->approvers->contains('approver_id', $user->id);
+
+        if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
+        }
+
+        $fs->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
+        $fs->can_cancel = !$fs->approvers->contains('status', 'approved');
+        $fs->current_user_id = $user->id;
+
+        return response()->json([
+            'success' => true,
+            'data' => $fs
+        ]);
     }
 
     public function store(Request $request)

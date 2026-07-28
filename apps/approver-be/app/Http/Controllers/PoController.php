@@ -13,10 +13,13 @@ class PoController extends Controller
         $user = auth()->user();
         $query = \App\Models\Po::with(['user:id,name', 'approverLines'])->latest();
 
-        if ($user->role !== 'super_admin') {
-            $query->where(function($q) use ($user) {
+        // Keamanan data: hanya tampilkan dokumen di mana user adalah pemohon (user_id) 
+        // atau terdaftar sebagai salah satu approver (approverLines).
+        $showAll = request()->query('all') == '1' && $user->role === 'super_admin';
+        if (!$showAll) {
+            $query->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id)
-                  ->orWhereHas('approverLines', function($q2) use ($user) {
+                  ->orWhereHas('approverLines', function ($q2) use ($user) {
                       $q2->where('approver_id', $user->id);
                   });
             });

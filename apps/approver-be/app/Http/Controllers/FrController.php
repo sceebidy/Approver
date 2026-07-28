@@ -12,40 +12,73 @@ class FrController extends Controller
 {
     public function index()
     {
-        $items = Fr::with('requester:id,name', 'kategoriFr:id,nama', 'approvers')
-            ->latest()
-            ->get()
-            ->map(function($f) {
-                $approverLines = $f->approvers;
-                $totalLines = $approverLines->count();
-                $approvedCount = $approverLines->where('status', 'approved')->count();
-                $rejectedCount = $approverLines->where('status', 'rejected')->count();
+        $user = auth()->user();
+        $query = Fr::with('requester:id,name', 'kategoriFr:id,nama', 'approvers')->latest();
 
-                $status = 'pending';
-                if ($rejectedCount > 0) {
-                    $status = 'rejected';
-                } elseif ($totalLines > 0 && $approvedCount === $totalLines) {
-                    $status = 'approved';
-                } elseif ($f->status === 'draft') {
-                    $status = 'draft';
-                }
-
-                return [
-                    'id'                => $f->id,
-                    'number_fr'         => $f->number_fr,
-                    'requester_id'      => $f->requester_id,
-                    'requester_name'    => $f->requester?->name,
-                    'kategori_fr_id'    => $f->kategori_fr_id,
-                    'kategori_fr_name'  => $f->kategoriFr?->nama,
-                    'request_date_time' => $f->request_date_time,
-                    'status'            => $status,
-                    'keterangan'        => $f->keterangan,
-                    'created_at'        => $f->created_at,
-                    'can_cancel'        => !$approverLines->contains('status', 'approved'),
-                ];
+        $showAll = request()->query('all') == '1' && $user->role === 'super_admin';
+        if (!$showAll) {
+            $query->where(function ($q) use ($user) {
+                $q->where('requester_id', $user->id)
+                  ->orWhereHas('approvers', function ($q2) use ($user) {
+                      $q2->where('approver_id', $user->id);
+                  });
             });
+        }
+
+        $items = $query->get()->map(function ($f) use ($user) {
+            $approverLines = $f->approvers;
+            $totalLines = $approverLines->count();
+            $approvedCount = $approverLines->where('status', 'approved')->count();
+            $rejectedCount = $approverLines->where('status', 'rejected')->count();
+
+            $status = 'pending';
+            if ($rejectedCount > 0) {
+                $status = 'rejected';
+            } elseif ($totalLines > 0 && $approvedCount === $totalLines) {
+                $status = 'approved';
+            } elseif ($f->status === 'draft') {
+                $status = 'draft';
+            }
+
+            return [
+                'id'                => $f->id,
+                'number_fr'         => $f->number_fr,
+                'requester_id'      => $f->requester_id,
+                'requester_name'    => $f->requester?->name,
+                'kategori_fr_id'    => $f->kategori_fr_id,
+                'kategori_fr_name'  => $f->kategoriFr?->nama,
+                'request_date_time' => $f->request_date_time,
+                'status'            => $status,
+                'keterangan'        => $f->keterangan,
+                'created_at'        => $f->created_at,
+                'can_cancel'        => !$approverLines->contains('status', 'approved'),
+                'request_type'      => $f->requester_id === $user->id ? 'Pengajuan Saya' : ($approverLines->contains('approver_id', $user->id) ? 'Butuh Approval Anda' : 'Lainnya'),
+            ];
+        });
 
         return response()->json(['success' => true, 'data' => $items]);
+    }
+
+    public function show($id)
+    {
+        $fr = Fr::with(['requester:id,name', 'kategoriFr:id,nama', 'itemLines.itemLineTaxes.tax', 'approvers.approver:id,name'])->findOrFail($id);
+
+        $user = auth()->user();
+        $isOwner = $fr->requester_id === $user->id;
+        $isApprover = $fr->approvers->contains('approver_id', $user->id);
+
+        if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
+        }
+
+        $fr->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
+        $fr->can_cancel = !$fr->approvers->contains('status', 'approved');
+        $fr->current_user_id = $user->id;
+
+        return response()->json([
+            'success' => true,
+            'data' => $fr
+        ]);
     }
 
     public function categories()

@@ -125,6 +125,19 @@ class DocumentSigningController extends Controller
             return response()->json(['success' => false, 'message' => 'Dokumen tidak ditemukan.'], 404);
         }
 
+        // Keamanan data: Otentikasi dan otorisasi akses PDF
+        $user = auth()->user();
+        if ($user) {
+            $ownerId = $document->user_id ?? $document->requester_id ?? null;
+            $isOwner = $ownerId === $user->id;
+            $approvers = $document->approverLines ?? $document->approvers ?? collect();
+            $isApprover = $approvers->contains('approver_id', $user->id);
+
+            if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
+                return response()->json(['success' => false, 'message' => 'Anda tidak memiliki akses ke PDF dokumen ini.'], 403);
+            }
+        }
+
         // Cek apakah PDF sudah di-generate sebelumnya
         $filePath = null;
         if (!empty($document->signed_pdf_path)) {
