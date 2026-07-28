@@ -71,6 +71,7 @@ export default function PoListPage() {
         onClose={() => setSelectedDocId(null)}
         docId={selectedDocId}
         docType="po"
+        onSuccess={refresh}
       />
     </>
   );

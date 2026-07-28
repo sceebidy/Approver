@@ -42,6 +42,7 @@ export default function FsListPage() {
         }}
         docId={selectedDocId}
         docType="fs"
+        onSuccess={refresh}
       />
     </>
   );

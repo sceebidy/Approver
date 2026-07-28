@@ -70,6 +70,7 @@ export default function PpabListPage() {
         onClose={() => setSelectedDocId(null)}
         docId={selectedDocId}
         docType="ppab"
+        onSuccess={refresh}
       />
     </>
   );

@@ -57,5 +57,15 @@ export function useDocumentList<T = any>(endpoint: string) {
     fetch_();
   }, [fetch_]);
 
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetch_();
+    };
+    window.addEventListener("refresh-document-list", handleRefresh);
+    return () => {
+      window.removeEventListener("refresh-document-list", handleRefresh);
+    };
+  }, [fetch_]);
+
   return { rows, loading, error, refresh: fetch_ };
 }

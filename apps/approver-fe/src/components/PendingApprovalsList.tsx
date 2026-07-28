@@ -46,6 +46,14 @@ export default function PendingApprovalsList({ onRowClick }: { onRowClick?: (id:
 
   useEffect(() => {
     fetchApprovals();
+
+    const handleRefresh = () => {
+      fetchApprovals();
+    };
+    window.addEventListener("refresh-document-list", handleRefresh);
+    return () => {
+      window.removeEventListener("refresh-document-list", handleRefresh);
+    };
   }, []);
 
   const promptAction = (type: string, id: number, action: 'approve' | 'reject') => {

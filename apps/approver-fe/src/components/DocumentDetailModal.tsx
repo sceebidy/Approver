@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { getXsrfToken } from "@/lib/csrf";
-import ConfirmActionModal from "./ConfirmActionModal";
 
 interface ApproverLine {
   id: number;
@@ -60,9 +59,10 @@ interface DocumentDetailModalProps {
   onClose: () => void;
   docId: number | null;
   docType: 'ppab' | 'po' | 'mis' | 'fr' | 'fs';
+  onSuccess?: () => void;
 }
 
-export default function DocumentDetailModal({ isOpen, onClose, docId, docType }: DocumentDetailModalProps) {
+export default function DocumentDetailModal({ isOpen, onClose, docId, docType, onSuccess }: DocumentDetailModalProps) {
   const [data, setData] = useState<DocDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,11 +71,13 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
     action: 'approve' | 'reject';
     lineId: number | null;
     isLoading: boolean;
+    catatan: string;
   }>({
     isOpen: false,
     action: 'approve',
     lineId: null,
-    isLoading: false
+    isLoading: false,
+    catatan: ''
   });
 
   useEffect(() => {
@@ -120,23 +122,37 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
       isOpen: true,
       action,
       lineId,
-      isLoading: false
+      isLoading: false,
+      catatan: ''
     });
   };
 
   const executeAction = async () => {
     if (!data || !data.current_user_id || !confirmModal.isOpen || !confirmModal.lineId) return;
 
+    // Validasi: alasan wajib untuk reject
+    if (confirmModal.action === 'reject' && !confirmModal.catatan.trim()) {
+      return; // tombol confirm sudah di-disable, ini safety guard
+    }
+
     setConfirmModal(prev => ({ ...prev, isLoading: true }));
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+
+      const body: Record<string, string> = {};
+      if (confirmModal.action === 'reject' && confirmModal.catatan.trim()) {
+        body.catatan = confirmModal.catatan.trim();
+      }
+
       const res = await fetch(`${apiUrl}/submissions/${docType.toLowerCase()}/${confirmModal.lineId}/${confirmModal.action}`, {
         method: "POST",
         headers: {
           "Accept": "application/json",
+          "Content-Type": "application/json",
           "X-XSRF-TOKEN": getXsrfToken(),
         },
+        body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
         credentials: "include"
       });
 
@@ -147,6 +163,15 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
 
       // Refresh detail setelah berhasil
       await fetchDetail();
+
+      // Dispatch global refresh event
+      window.dispatchEvent(new Event("refresh-document-list"));
+
+      // Call parent success callback
+      if (onSuccess) {
+        onSuccess();
+      }
+
       setConfirmModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
     } catch (err: any) {
       alert(err.message || "Gagal memproses tindakan.");
@@ -511,9 +536,18 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                         const isRejected = line.status === 'rejected';
                         const isPending = line.status === 'pending';
 
+                        const isUserPending = isPending && line.approver_id === data?.current_user_id;
+
                         return (
-                          <div key={idx} className="relative pl-6">
-                            <span className="absolute -left-[9px] top-1 bg-white">
+                          <div 
+                            key={idx} 
+                            className={`relative pl-6 py-2 transition-all rounded-r-lg ${
+                              isUserPending 
+                                ? 'bg-amber-50/50 border-l-2 border-amber-500 -ml-[2px]' 
+                                : ''
+                            }`}
+                          >
+                            <span className={`absolute ${isUserPending ? '-left-[7px]' : '-left-[9px]'} top-3.5 bg-white`}>
                               {isApproved ? (
                                 <CheckCircle2 size={16} className="text-emerald-500 bg-white" />
                               ) : isRejected ? (
@@ -522,45 +556,57 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                                 <Clock size={16} className="text-amber-500 bg-white" />
                               )}
                             </span>
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
-                              <div>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                              <div className="min-w-0">
                                 <h5 className="text-[14px] font-semibold text-[#111827]">
                                   {line.approver?.name || `User #${line.approver_id}`}
                                 </h5>
-                                <p className="text-[12px] text-[#6B7280] uppercase tracking-wider font-medium mt-0.5">
+                                <p className="text-[12px] text-[#6B7280] uppercase tracking-wider font-medium mt-0.5 flex items-center gap-1.5">
                                   {line.role ? line.role.replace(/_/g, ' ') : 'APPROVER'}
+                                  {(isUserPending || (line.approver_id === data?.current_user_id && (isApproved || isRejected))) && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded normal-case tracking-normal">
+                                      (Anda)
+                                    </span>
+                                  )}
                                 </p>
                               </div>
-                              <div className="flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
-                                <span className={`inline-flex px-2 py-0.5 text-[11px] font-semibold rounded-full ${isApproved ? 'bg-emerald-50 text-emerald-700' :
-                                    isRejected ? 'bg-red-50 text-red-700' :
-                                      'bg-amber-50 text-amber-700'
-                                  }`}>
-                                  {line.status.charAt(0).toUpperCase() + line.status.slice(1)}
-                                </span>
-                                {line.status !== 'pending' && (line.signed_at || line.updated_at || line.timestamp) && (
-                                  <span className="text-[11px] text-[#9CA3AF] whitespace-nowrap mt-1 sm:mt-0">
-                                    {new Date((line.signed_at || line.updated_at || line.timestamp) as string).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
-                                  </span>
+                              {/* Kanan: tombol aksi (jika user pending) atau badge status */}
+                              <div className="flex items-center gap-2 shrink-0 sm:flex-col sm:items-end sm:gap-1">
+                                {isUserPending ? (
+                                  /* Ganti badge Pending dengan 2 tombol aksi */
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      onClick={() => promptAction('approve', line.id)}
+                                      className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500 text-white text-[11px] font-semibold rounded-md hover:bg-emerald-600 active:scale-95 transition-all shadow-sm"
+                                    >
+                                      <CheckCircle2 size={12} strokeWidth={2.5} /> Setujui
+                                    </button>
+                                    <button
+                                      onClick={() => promptAction('reject', line.id)}
+                                      className="flex items-center gap-1 px-2.5 py-1 bg-white border border-red-400 text-red-600 text-[11px] font-semibold rounded-md hover:bg-red-50 active:scale-95 transition-all shadow-sm"
+                                    >
+                                      <XCircle size={12} strokeWidth={2.5} /> Tolak
+                                    </button>
+                                  </div>
+                                ) : (
+                                  /* Badge status read-only untuk baris lain */
+                                  <>
+                                    <span className={`inline-flex px-2 py-0.5 text-[11px] font-semibold rounded-full ${
+                                        isApproved ? 'bg-emerald-50 text-emerald-700' :
+                                        isRejected ? 'bg-red-50 text-red-700' :
+                                        'bg-amber-50 text-amber-700'
+                                      }`}>
+                                      {line.status.charAt(0).toUpperCase() + line.status.slice(1)}
+                                    </span>
+                                    {line.status !== 'pending' && (line.signed_at || line.updated_at || line.timestamp) && (
+                                      <span className="text-[11px] text-[#9CA3AF] whitespace-nowrap">
+                                        {new Date((line.signed_at || line.updated_at || line.timestamp) as string).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>
-                            {isPending && line.approver_id === data?.current_user_id && (
-                              <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-1.5 sm:ml-auto sm:justify-end">
-                                <button
-                                  onClick={() => promptAction('approve', line.id)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-500 text-emerald-600 hover:bg-emerald-50 rounded-lg text-[12px] font-bold shadow-sm transition-all"
-                                >
-                                  <CheckCircle2 size={14} strokeWidth={2.5} /> Setujui
-                                </button>
-                                <button
-                                  onClick={() => promptAction('reject', line.id)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-500 text-red-600 hover:bg-red-50 rounded-lg text-[12px] font-bold shadow-sm transition-all"
-                                >
-                                  <XCircle size={14} strokeWidth={2.5} /> Tolak
-                                </button>
-                              </div>
-                            )}
                           </div>
                         );
                       })}
@@ -574,53 +620,75 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
           ) : null}
         </div>
 
-        <div className="border-t border-[#E3E6EA] p-4 bg-[#F8F9FB] sm:rounded-b-lg flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4">
-          <div className="flex-1">
-            {userPendingLines.length > 0 && (
-              <div className="flex flex-col gap-2 w-full max-w-xl">
-                {userPendingLines.map((line: any) => (
-                  <div key={line.id} className="flex items-center justify-between bg-white border border-[#E3E6EA] rounded-lg p-3 shadow-sm">
-                    <span className="text-[13px] font-medium text-[#374151]">
-                      Role Anda: <strong className="uppercase text-[#1F3A5F]">{line.role.replace(/_/g, ' ')}</strong>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => promptAction('approve', line.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-xs font-semibold rounded hover:bg-emerald-600 transition-colors"
-                      >
-                        <CheckCircle2 size={14} /> Setujui
-                      </button>
-                      <button
-                        onClick={() => promptAction('reject', line.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white text-xs font-semibold rounded hover:bg-red-600 transition-colors"
-                      >
-                        <XCircle size={14} /> Tolak
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="border-t border-[#E3E6EA] px-5 py-3 bg-[#F8F9FB] sm:rounded-b-lg flex items-center justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-white border border-[#D1D5DB] text-sm font-medium text-slate-700 rounded-md hover:bg-slate-50 transition-colors whitespace-nowrap self-end md:self-auto"
+            className="px-4 py-2 bg-white border border-[#D1D5DB] text-[13px] font-medium text-slate-700 rounded-md hover:bg-slate-50 transition-colors"
           >
             Tutup
           </button>
         </div>
       </div>
 
-      <ConfirmActionModal
-        isOpen={confirmModal.isOpen}
-        title="Konfirmasi Persetujuan"
-        message={`Apakah Anda yakin ingin me${confirmModal.action === 'approve' ? 'nyetujui' : 'nolak'} pengajuan ini?`}
-        confirmText={confirmModal.action === 'approve' ? 'Ya, Setujui' : 'Ya, Tolak'}
-        isDestructive={confirmModal.action === 'reject'}
-        isLoading={confirmModal.isLoading}
-        onConfirm={executeAction}
-        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-      />
+      {/* Inline Confirm/Reject Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border border-[#E3E6EA] animate-in zoom-in-95 duration-150">
+            {confirmModal.action === 'approve' ? (
+              <>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-1">Konfirmasi Persetujuan</h3>
+                <p className="text-[13px] text-slate-500 mb-6">Apakah Anda yakin ingin menyetujui pengajuan ini? Tindakan ini tidak dapat dibatalkan.</p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                    disabled={confirmModal.isLoading}
+                    className="px-4 py-2 text-[13px] font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={executeAction}
+                    disabled={confirmModal.isLoading}
+                    className="flex items-center gap-2 px-4 py-2 text-[13px] font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-70 shadow-sm"
+                  >
+                    {confirmModal.isLoading && <Loader2 size={14} className="animate-spin" />}
+                    Ya, Setujui
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-[16px] font-bold text-slate-900 mb-1">Tolak Pengajuan</h3>
+                <p className="text-[13px] text-slate-500 mb-3">Masukkan alasan penolakan. Alasan wajib diisi.</p>
+                <textarea
+                  value={confirmModal.catatan}
+                  onChange={(e) => setConfirmModal(prev => ({ ...prev, catatan: e.target.value }))}
+                  placeholder="Tuliskan alasan penolakan..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none mb-4 transition-shadow"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                    disabled={confirmModal.isLoading}
+                    className="px-4 py-2 text-[13px] font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={executeAction}
+                    disabled={confirmModal.isLoading || !confirmModal.catatan.trim()}
+                    className="flex items-center gap-2 px-4 py-2 text-[13px] font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    {confirmModal.isLoading && <Loader2 size={14} className="animate-spin" />}
+                    Ya, Tolak
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

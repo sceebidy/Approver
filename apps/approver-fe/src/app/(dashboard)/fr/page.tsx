@@ -62,6 +62,7 @@ export default function FrListPage() {
         }}
         docId={selectedDocId}
         docType="fr"
+        onSuccess={refresh}
       />
     </>
   );
