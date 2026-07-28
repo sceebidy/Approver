@@ -154,7 +154,7 @@ export default function Sidebar() {
             <span className="text-[12px] text-[#6B7280] font-medium truncate">{currentDate}</span>
             <button 
               onClick={handleLogout} 
-              className="relative w-8 h-8 rounded-md bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all group shrink-0 shadow-sm border border-red-100" 
+              className="p-1.5 rounded-md text-red-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors group shrink-0" 
               title="Logout"
             >
               <LogOut size={16} strokeWidth={2.5} className="transition-colors" />
@@ -164,7 +164,7 @@ export default function Sidebar() {
         {collapsed && (
           <button 
             onClick={handleLogout} 
-            className="relative w-10 h-10 rounded-md bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all group shrink-0 shadow-sm border border-red-100" 
+            className="p-2 rounded-md text-red-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors group shrink-0" 
             title="Logout"
           >
              <LogOut size={18} strokeWidth={2.5} className="transition-colors" />
@@ -220,7 +220,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-2">
           <button 
             onClick={handleLogout}
-            className="relative w-9 h-9 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all shadow-sm border border-red-100"
+            className="p-1.5 rounded-md text-red-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors"
             title="Logout"
           >
             <LogOut size={17} strokeWidth={2.5} />
