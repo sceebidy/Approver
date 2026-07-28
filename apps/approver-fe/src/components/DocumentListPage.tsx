@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Plus, ChevronDown, Loader2, AlertCircle, FileText } from "lucide-react";
+import { Search, Plus, ChevronDown, Loader2, AlertCircle, FileText, X } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 export interface DocColumn {
@@ -47,7 +47,8 @@ const tabs = [
 export default function DocumentListPage({ title, subtitle, docType, createLabel, createHref, createNode, columns, rows, loading, error, onDelete, onRowClick }: Props) {
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [deletingRow, setDeletingRow] = useState<DocRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -65,18 +66,17 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
       if (!matchesSearch) return false;
     }
 
-    if (dateFilter !== "all" && r.created_at) {
-      const rowDate = new Date(r.created_at);
-      const today = new Date();
-      if (dateFilter === "today") {
-        if (rowDate.toDateString() !== today.toDateString()) return false;
-      } else if (dateFilter === "week") {
-        const weekAgo = new Date();
-        weekAgo.setDate(today.getDate() - 7);
-        if (rowDate < weekAgo) return false;
-      } else if (dateFilter === "month") {
-        if (rowDate.getMonth() !== today.getMonth() || rowDate.getFullYear() !== today.getFullYear()) return false;
+    if (dateFilter && r.created_at) {
+      try {
+        const rowDate = new Date(r.created_at).toISOString().split('T')[0];
+        if (rowDate !== dateFilter) return false;
+      } catch (e) {
+        // ignore invalid dates
       }
+    }
+
+    if (typeFilter !== "all" && r.request_type) {
+      if (r.request_type !== typeFilter) return false;
     }
 
     return true;
@@ -137,7 +137,8 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
       <div className="bg-white rounded-xl border border-[#E3E6EA] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] overflow-hidden transition-all">
         {/* Filters and Tabs */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between px-5 py-4 border-b border-[#E3E6EA] gap-4">
-          <div className="flex items-center p-1 bg-[#F8F9FB] rounded-lg border border-[#E3E6EA]/80 w-fit">
+          <div className="w-full xl:w-auto overflow-x-auto pb-1 -mb-1 scrollbar-hide">
+            <div className="flex items-center p-1 bg-[#F8F9FB] rounded-lg border border-[#E3E6EA]/80 w-max">
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -151,8 +152,39 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
                 {t.label}
               </button>
             ))}
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+            <div className="relative w-full sm:w-auto">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="w-full sm:w-auto appearance-none text-[13px] text-[#4B5563] bg-[#F8F9FB] border border-[#E3E6EA] rounded-lg pl-4 pr-10 py-2 hover:bg-white hover:border-[#D1D5DB] focus:bg-white focus:border-[#1F3A5F]/40 focus:ring-2 focus:ring-[#1F3A5F]/10 outline-none cursor-pointer transition-all"
+              >
+                <option value="all">Semua Tipe</option>
+                <option value="Pengajuan Saya">Pengajuan Saya</option>
+                <option value="Butuh Approval Anda">Butuh Approval Anda</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none" />
+            </div>
+            <div className="relative w-full sm:w-auto flex items-center gap-2">
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full sm:w-auto text-[13px] text-[#4B5563] bg-[#F8F9FB] border border-[#E3E6EA] rounded-lg px-3 py-2 hover:bg-white hover:border-[#D1D5DB] focus:bg-white focus:border-[#1F3A5F]/40 focus:ring-2 focus:ring-[#1F3A5F]/10 outline-none cursor-pointer transition-all"
+                title="Filter by date"
+              />
+              {dateFilter && (
+                <button 
+                  onClick={() => setDateFilter("")}
+                  className="p-1.5 text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg transition-all flex-shrink-0"
+                  title="Clear date filter"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
             <div className="relative w-full sm:w-auto">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
               <input
@@ -161,19 +193,6 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 pr-4 py-2 text-[13px] bg-[#F8F9FB] border border-[#E3E6EA] rounded-lg w-full sm:w-64 outline-none focus:bg-white focus:border-[#1F3A5F]/40 focus:ring-2 focus:ring-[#1F3A5F]/10 placeholder:text-[#9CA3AF] transition-all"
               />
-            </div>
-            <div className="relative w-full sm:w-auto">
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full sm:w-auto appearance-none text-[13px] text-[#4B5563] bg-[#F8F9FB] border border-[#E3E6EA] rounded-lg pl-4 pr-10 py-2 hover:bg-white hover:border-[#D1D5DB] focus:bg-white focus:border-[#1F3A5F]/40 focus:ring-2 focus:ring-[#1F3A5F]/10 outline-none cursor-pointer transition-all"
-              >
-                <option value="all">Semua Waktu</option>
-                <option value="today">Hari Ini</option>
-                <option value="week">7 Hari Terakhir</option>
-                <option value="month">Bulan Ini</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none" />
             </div>
           </div>
         </div>

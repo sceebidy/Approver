@@ -10,6 +10,8 @@ interface ApproverLine {
   role: string;
   status: 'pending' | 'approved' | 'rejected';
   timestamp: string | null;
+  signed_at?: string | null;
+  updated_at?: string | null;
   approver: {
     id: number;
     name: string;
@@ -345,9 +347,9 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                                   }`}>
                                   {line.status.charAt(0).toUpperCase() + line.status.slice(1)}
                                 </span>
-                                {line.timestamp && (
+                                {line.status !== 'pending' && (line.signed_at || line.updated_at || line.timestamp) && (
                                   <span className="text-[11px] text-[#9CA3AF] whitespace-nowrap mt-1 sm:mt-0">
-                                    {new Date(line.timestamp).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                                    {new Date((line.signed_at || line.updated_at || line.timestamp) as string).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
                                   </span>
                                 )}
                               </div>

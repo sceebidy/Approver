@@ -153,10 +153,10 @@ export default function SsoUserPicker({ value, onChange, placeholder, filterOwnU
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-md border border-[#E3E6EA] bg-white px-2.5 py-1.5 text-left text-sm hover:border-[#1F3A5F]/40"
+        className="flex w-full min-w-0 items-center gap-2 rounded-md border border-[#E3E6EA] bg-white px-2.5 py-1.5 text-left text-sm hover:border-[#1F3A5F]/40"
       >
         <User size={14} className="shrink-0 text-[#9CA3AF]" />
-        <span className={"flex-1 truncate " + (selected ? "text-[#111827]" : "text-[#6B7280]")}>
+        <span className={"flex-1 min-w-0 truncate " + (selected ? "text-[#111827]" : "text-[#6B7280]")}>
           {displayLabel}
         </span>
         {selected ? (
@@ -180,7 +180,9 @@ export default function SsoUserPicker({ value, onChange, placeholder, filterOwnU
       </button>
 
       {extractedText && !selected ? (
-        <p className="mt-1 text-[11px] text-[#9CA3AF]">Dari dokumen: {extractedText}</p>
+        <p className="mt-1 text-[11px] text-[#9CA3AF] whitespace-normal break-words leading-relaxed">
+          Dari dokumen: {extractedText}
+        </p>
       ) : null}
 
       {open ? (
