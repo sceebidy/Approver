@@ -128,8 +128,8 @@ def _create_stamp_overlay(
 ) -> io.BytesIO:
     """
     Buat overlay PDF dengan stamp approver di bagian bawah.
-    Hanya menampilkan QR Code (diperkecil) dan teks "Ditandatangani secara elektronik"
-    yang diposisikan tepat di tengah-tengah kotak tanda tangan yang terdeteksi.
+    Menampilkan QR Code (ukuran 40pt) dan teks "Ditandatangani secara elektronik" (5.5pt)
+    yang diposisikan pas dan sedikit lebih ke atas di dalam kotak tanda tangan.
     """
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(page_width, page_height))
@@ -139,14 +139,17 @@ def _create_stamp_overlay(
         buf.seek(0)
         return buf
 
-    qr_size = 32.0
+    qr_size = 40.0
+    label_font_size = 5.5
+    gap = 5.0
+    total_content_height = qr_size + gap + label_font_size
     box_height = abs(box_top_y - box_bottom_y)
     
-    # Hitung posisi Y agar QR code dan label persis di tengah-tengah tinggi kotak
-    total_content_height = qr_size + 7.0
-    start_y = box_top_y - ((box_height - total_content_height) / 2.0)
+    # Hitung posisi Y agar QR code & label di dalam kotak, dengan offset ke atas +5pt
+    offset_up = 5.0
+    start_y = box_top_y - ((box_height - total_content_height) / 2.0) + offset_up
     qr_y = start_y - qr_size
-    label_y = qr_y - 6.0
+    label_y = qr_y - gap - (label_font_size / 2.0)
 
     for i, approver in enumerate(approvers):
         if i < len(column_centers):
@@ -167,8 +170,8 @@ def _create_stamp_overlay(
             c.setFont("Helvetica", 5)
             c.drawCentredString(col_center_x, qr_y + qr_size / 2, "QR Code")
         
-        # -- Teks "Ditandatangani secara elektronik" (Normal, tidak miring) --
-        c.setFont("Helvetica", 4.5)
+        # -- Teks "Ditandatangani secara elektronik" --
+        c.setFont("Helvetica", label_font_size)
         c.setFillColor(HexColor("#059669"))
         c.drawCentredString(col_center_x, label_y, "Ditandatangani secara elektronik")
     
