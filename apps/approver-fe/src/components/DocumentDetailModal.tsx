@@ -59,10 +59,12 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     action: 'approve' | 'reject';
+    lineId: number | null;
     isLoading: boolean;
   }>({
     isOpen: false,
     action: 'approve',
+    lineId: null,
     isLoading: false
   });
 
@@ -103,25 +105,23 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
     }
   };
 
-  const promptAction = (action: 'approve' | 'reject') => {
+  const promptAction = (action: 'approve' | 'reject', lineId: number) => {
     setConfirmModal({
       isOpen: true,
       action,
+      lineId,
       isLoading: false
     });
   };
 
   const executeAction = async () => {
-    if (!data || !data.current_user_id || !confirmModal.isOpen) return;
-    const actualApprovers = data.approverLines || data.approver_lines || [];
-    const pendingLine = actualApprovers.find(l => l.approver_id === data.current_user_id && l.status === 'pending');
-    if (!pendingLine) return;
+    if (!data || !data.current_user_id || !confirmModal.isOpen || !confirmModal.lineId) return;
 
     setConfirmModal(prev => ({ ...prev, isLoading: true }));
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
-      const res = await fetch(`${apiUrl}/submissions/${docType.toLowerCase()}/${pendingLine.id}/${confirmModal.action}`, {
+      const res = await fetch(`${apiUrl}/submissions/${docType.toLowerCase()}/${confirmModal.lineId}/${confirmModal.action}`, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -374,6 +374,22 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
                                 )}
                               </div>
                             </div>
+                            {isPending && line.approver_id === data?.current_user_id && (
+                              <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-1.5 sm:ml-auto sm:justify-end">
+                                <button
+                                  onClick={() => promptAction('approve', line.id)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-500 text-emerald-600 hover:bg-emerald-50 rounded-lg text-[12px] font-bold shadow-sm transition-all"
+                                >
+                                  <CheckCircle2 size={14} strokeWidth={2.5} /> Setujui
+                                </button>
+                                <button
+                                  onClick={() => promptAction('reject', line.id)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-500 text-red-600 hover:bg-red-50 rounded-lg text-[12px] font-bold shadow-sm transition-all"
+                                >
+                                  <XCircle size={14} strokeWidth={2.5} /> Tolak
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -388,28 +404,10 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType }:
         </div>
 
         {/* Footer */}
-        <div className="border-t border-[#E3E6EA] p-4 bg-[#F8F9FB] sm:rounded-b-lg flex items-center justify-between shrink-0">
-          <div>
-            {data && data.current_user_id && actualApprovers.some(l => l.approver_id === data.current_user_id && l.status === 'pending') && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => promptAction('approve')}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors"
-                >
-                  <CheckCircle2 size={16} /> Setujui
-                </button>
-                <button
-                  onClick={() => promptAction('reject')}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-md hover:bg-red-600 transition-colors"
-                >
-                  <XCircle size={16} /> Tolak
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="border-t border-[#E3E6EA] p-4 bg-[#F8F9FB] sm:rounded-b-lg flex items-center justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-white border border-[#D1D5DB] text-sm font-medium text-slate-700 rounded-md hover:bg-slate-50 transition-colors"
+            className="px-4 py-2 bg-white border border-[#D1D5DB] text-sm font-medium text-slate-700 rounded-md hover:bg-slate-50 transition-colors shadow-sm"
           >
             Tutup
           </button>
