@@ -12,6 +12,7 @@ import io
 from typing import List, Optional, Tuple
 from dataclasses import dataclass
 
+# pyrefly: ignore [missing-import]
 from PyPDF2 import PdfReader, PdfWriter
 from reportlab.lib.colors import HexColor
 from reportlab.pdfgen import canvas
