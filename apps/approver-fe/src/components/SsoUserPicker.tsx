@@ -17,9 +17,10 @@ interface SsoUserPickerProps {
   value: unknown;
   onChange: (value: SelectedEmployee | string) => void;
   placeholder?: string;
+  filterOwnUnit?: boolean;
 }
 
-export default function SsoUserPicker({ value, onChange, placeholder }: SsoUserPickerProps) {
+export default function SsoUserPicker({ value, onChange, placeholder, filterOwnUnit }: SsoUserPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [employees, setEmployees] = useState<PortalEmployee[]>([]);
@@ -64,6 +65,9 @@ export default function SsoUserPicker({ value, onChange, placeholder }: SsoUserP
         params.set("search", trimmed);
         params.set("q", trimmed);
       }
+      if (filterOwnUnit) {
+        params.set("filter_own_unit", "1");
+      }
       const qs = params.toString() ? "?" + params.toString() : "";
       const url = getApiBaseUrl() + "/portal/employees" + qs;
       const res = await fetch(url, {
@@ -86,7 +90,7 @@ export default function SsoUserPicker({ value, onChange, placeholder }: SsoUserP
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterOwnUnit]);
 
   useEffect(() => {
     if (!open) return;

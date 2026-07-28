@@ -13,7 +13,8 @@ class ApproverKategoriFr extends Model
 
     protected $fillable = [
         'kategori_fr_id',
-        'user_id'
+        'user_id',
+        'role',
     ];
 
     public function kategoriFr()

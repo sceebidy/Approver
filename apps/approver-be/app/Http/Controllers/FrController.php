@@ -12,21 +12,38 @@ class FrController extends Controller
 {
     public function index()
     {
-        $items = Fr::with('requester:id,name', 'kategoriFr:id,nama')
+        $items = Fr::with('requester:id,name', 'kategoriFr:id,nama', 'approvers')
             ->latest()
             ->get()
-            ->map(fn($f) => [
-                'id'                => $f->id,
-                'number_fr'         => $f->number_fr,
-                'requester_id'      => $f->requester_id,
-                'requester_name'    => $f->requester?->name,
-                'kategori_fr_id'    => $f->kategori_fr_id,
-                'kategori_fr_name'  => $f->kategoriFr?->nama,
-                'request_date_time' => $f->request_date_time,
-                'status'            => $f->status ?? 'pending',
-                'keterangan'        => $f->keterangan,
-                'created_at'        => $f->created_at,
-            ]);
+            ->map(function($f) {
+                $approverLines = $f->approvers;
+                $totalLines = $approverLines->count();
+                $approvedCount = $approverLines->where('status', 'approved')->count();
+                $rejectedCount = $approverLines->where('status', 'rejected')->count();
+
+                $status = 'pending';
+                if ($rejectedCount > 0) {
+                    $status = 'rejected';
+                } elseif ($totalLines > 0 && $approvedCount === $totalLines) {
+                    $status = 'approved';
+                } elseif ($f->status === 'draft') {
+                    $status = 'draft';
+                }
+
+                return [
+                    'id'                => $f->id,
+                    'number_fr'         => $f->number_fr,
+                    'requester_id'      => $f->requester_id,
+                    'requester_name'    => $f->requester?->name,
+                    'kategori_fr_id'    => $f->kategori_fr_id,
+                    'kategori_fr_name'  => $f->kategoriFr?->nama,
+                    'request_date_time' => $f->request_date_time,
+                    'status'            => $status,
+                    'keterangan'        => $f->keterangan,
+                    'created_at'        => $f->created_at,
+                    'can_cancel'        => !$approverLines->contains('status', 'approved'),
+                ];
+            });
 
         return response()->json(['success' => true, 'data' => $items]);
     }
@@ -69,6 +86,11 @@ class FrController extends Controller
             'items.*.taxes' => 'nullable|array',
             'items.*.taxes.*.tax_id' => 'required|integer|exists:tax,id',
             'items.*.taxes.*.value' => 'required|numeric',
+            'approver_lines' => 'required|array|min:1',
+            'approver_lines.*.employee_id' => 'required|string',
+            'approver_lines.*.role' => 'required|string|in:issued_by,checked_by,approved_by,approved_by_atasan',
+            'approver_lines.*.name' => 'nullable|string',
+            'approver_lines.*.email' => 'nullable|string',
         ]);
 
         $userId = auth()->id();
@@ -79,14 +101,14 @@ class FrController extends Controller
             ], 401);
         }
 
-        $kategori = KategoriFr::with('approverKategoriFr')->findOrFail($data['kategori_fr_id']);
+        $kategori = KategoriFr::findOrFail($data['kategori_fr_id']);
 
         $fr = DB::transaction(function () use ($data, $userId, $kategori) {
             $status = $data['status'] ?? 'submitted';
 
             $fr = Fr::create([
                 'requester_id' => $userId,
-                'seksi_id' => $kategori->seksi_id,
+                'seksi_id' => null,
                 'kategori_fr_id' => $kategori->id,
                 'currency' => $data['currency'] ?? 'IDR',
                 'request_date_time' => now(),
@@ -125,13 +147,20 @@ class FrController extends Controller
                 }
             }
 
-            foreach ($kategori->approverKategoriFr as $approverKat) {
+            foreach ($data['approver_lines'] as $app) {
+                $userModel = $this->getOrCreateUser($app);
                 $fr->approvers()->create([
-                    'approver_id' => $approverKat->user_id,
+                    'approver_id' => $userModel->id,
+                    'role' => $app['role'],
                     'status' => 'pending',
                     'update_date_time' => null,
                 ]);
             }
+
+            // Sync physical document status to database based on new lines
+            $totalLines = count($data['approver_lines']);
+            $fr->status = $totalLines > 0 ? 'pending' : 'approved';
+            $fr->save();
 
             return $fr->load('itemLines.itemLineTaxes', 'approvers.approver');
         });
@@ -140,6 +169,50 @@ class FrController extends Controller
             'success' => true,
             'data' => $fr,
         ], 201);
+    }
+
+    private function getOrCreateUser($approverData)
+    {
+        if (!empty($approverData['employee_id'])) {
+            $user = \App\Models\User::where('employee_id', $approverData['employee_id'])->first();
+            if ($user) {
+                return $user;
+            }
+        }
+
+        $email = $approverData['email'] ?? ($approverData['employee_id'] . '@inl.co.id');
+        
+        return \App\Models\User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => $approverData['name'] ?? 'Approver',
+                'employee_id' => $approverData['employee_id'] ?? null,
+                'role' => $approverData['role'] ?? null,
+                'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+            ]
+        );
+    }
+
+    public function destroy($id)
+    {
+        $fr = Fr::with('approvers')->findOrFail($id);
+
+        $hasApproved = $fr->approvers()->where('status', 'approved')->exists();
+
+        if ($hasApproved) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengajuan tidak dapat dihapus karena sudah ada approval yang disetujui.'
+            ], 409);
+        }
+
+        DB::transaction(function () use ($fr) {
+            $fr->approvers()->delete();
+            $fr->itemLines()->delete(); // relasi itemLines() di model Fr
+            $fr->delete();
+        });
+
+        return response()->json(['success' => true, 'message' => 'Pengajuan FR berhasil dihapus.']);
     }
 }
 

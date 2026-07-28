@@ -57,6 +57,16 @@ class PortalController extends Controller
         $list = $this->extractEmployeeList($json);
         $normalized = array_values(array_filter(array_map([$this, 'normalizeEmployee'], $list)));
 
+        // Filter by own unit if requested
+        if ($request->query('filter_own_unit') == '1' && auth()->check()) {
+            $userUnit = auth()->user()->unit_nama;
+            if ($userUnit) {
+                $normalized = array_values(array_filter($normalized, function ($emp) use ($userUnit) {
+                    return isset($emp['unitNama']) && strtolower(trim($emp['unitNama'])) === strtolower(trim($userUnit));
+                }));
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => $normalized,

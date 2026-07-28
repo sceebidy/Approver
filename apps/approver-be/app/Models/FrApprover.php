@@ -14,6 +14,7 @@ class FrApprover extends Model
     protected $fillable = [
         'fr_id',
         'approver_id',
+        'role',
         'status',
         'update_date_time'
     ];

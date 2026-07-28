@@ -56,7 +56,14 @@ export default function DashboardPage() {
               <Clock size={16} strokeWidth={2.5} />
             </div>
           </div>
-          <PendingApprovalsList onRowClick={(id, type) => setSelectedDoc({ id, type: type as "ppab" | "po" | "mis" })} />
+          <PendingApprovalsList
+            onRowClick={(id, type) => {
+              const lowerType = type.toLowerCase();
+              if (["ppab", "po", "mis"].includes(lowerType)) {
+                setSelectedDoc({ id, type: lowerType as "ppab" | "po" | "mis" });
+              }
+            }}
+          />
         </section>
 
         {/* Recent Documents */}
