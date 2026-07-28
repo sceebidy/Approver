@@ -204,10 +204,16 @@ export default function Sidebar() {
       {/* Mobile Top Navbar */}
       <div className="md:hidden flex items-center justify-between h-16 px-4 bg-white border-b border-[#E3E6EA] shrink-0 sticky top-0 z-20">
         <div className="flex items-center gap-2.5">
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-1.5 -ml-1 rounded-md text-[#4B5563] hover:bg-[#F1F3F6] transition-colors"
+          >
+            <Menu size={22} strokeWidth={2} />
+          </button>
           <img 
             src="/logo.png" 
             alt="INL Logo" 
-            className="w-10 h-10 object-contain" 
+            className="w-10 h-10 object-contain ml-1" 
           />
           <span className="text-[16px] font-extrabold text-[#111827] tracking-tight">Approver</span>
         </div>
@@ -218,12 +224,6 @@ export default function Sidebar() {
             title="Logout"
           >
             <LogOut size={17} strokeWidth={2.5} />
-          </button>
-          <button 
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-1.5 rounded-md text-[#4B5563] hover:bg-[#F1F3F6] transition-colors"
-          >
-            <Menu size={22} strokeWidth={2} />
           </button>
         </div>
       </div>
