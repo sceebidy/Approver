@@ -285,6 +285,11 @@ export function collectApproversFromData(data: Record<string, unknown>): Record<
   const seen = new Set<string>();
 
   const add = (value: unknown, roleKey?: string) => {
+    if (Array.isArray(value)) {
+      value.forEach(v => add(v, roleKey));
+      return;
+    }
+    
     const payload = approverPayloadFromSelection(value);
     if (!payload) return;
 

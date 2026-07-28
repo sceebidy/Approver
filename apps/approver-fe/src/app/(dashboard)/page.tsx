@@ -56,7 +56,7 @@ export default function DashboardPage() {
               <Clock size={16} strokeWidth={2.5} />
             </div>
           </div>
-          <PendingApprovalsList onRowClick={(id, type) => setSelectedDoc({ id, type })} />
+          <PendingApprovalsList onRowClick={(id, type) => setSelectedDoc({ id, type: type as "ppab" | "po" | "mis" })} />
         </section>
 
         {/* Recent Documents */}

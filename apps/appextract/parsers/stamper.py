@@ -151,11 +151,50 @@ def _create_stamp_overlay(
     qr_y = start_y - qr_size
     label_y = qr_y - gap - (label_font_size / 2.0)
 
-    for i, approver in enumerate(approvers):
-        if i < len(column_centers):
-            col_center_x = column_centers[i]
+    # Mapping for PPAB approval roles to physical columns (0-indexed)
+    role_col_mapping = {
+        "pelaksanaan_disetujui_oleh": [0],
+        "diperiksa_oleh": [1, 2],
+        "anggaran_disetujui_oleh": [3],
+    }
+    
+    role_counts = {}
+    fallback_idx = 0
+    
+    # Track how many people are in each physical column so we can stack if necessary
+    col_occupancy = {}
+
+    for approver in approvers:
+        role_key = approver.role.lower().strip() if approver.role else ""
+        
+        if role_key in role_col_mapping:
+            allowed_cols = role_col_mapping[role_key]
+            count = role_counts.get(role_key, 0)
+            col_idx = allowed_cols[min(count, len(allowed_cols) - 1)]
+            role_counts[role_key] = count + 1
         else:
-            col_center_x = column_centers[-1] + ((i - len(column_centers) + 1) * 100)
+            col_idx = fallback_idx % max(len(column_centers), 1)
+            fallback_idx += 1
+            
+        if col_idx < len(column_centers):
+            col_center_x = column_centers[col_idx]
+        else:
+            col_center_x = column_centers[-1] + 100
+
+        # Check occupancy to offset Y if multiple people share the same column
+        occupancy = col_occupancy.get(col_idx, 0)
+        col_occupancy[col_idx] = occupancy + 1
+        
+        # If there are multiple people in the same column, offset them horizontally slightly or vertically.
+        # For a simple fix, we shift vertically by a fraction and shrink the gap, 
+        # or we assume they mostly fit the 1-to-1 mapping.
+        current_qr_y = qr_y
+        current_label_y = label_y
+        if occupancy > 0:
+            # Shift the next QR code to the right and slightly up if stacked
+            col_center_x += (occupancy * 15)
+            current_qr_y += (occupancy * 15)
+            current_label_y += (occupancy * 15)
 
         # -- QR Code --
         qr_x = col_center_x - qr_size / 2.0
@@ -163,17 +202,17 @@ def _create_stamp_overlay(
         try:
             qr_img_buf = _generate_qr_image(approver.verify_url)
             qr_img = ImageReader(qr_img_buf)
-            c.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size)
+            c.drawImage(qr_img, qr_x, current_qr_y, width=qr_size, height=qr_size)
         except Exception:
             c.setStrokeColor(HexColor("#CCCCCC"))
-            c.rect(qr_x, qr_y, qr_size, qr_size)
+            c.rect(qr_x, current_qr_y, qr_size, qr_size)
             c.setFont("Helvetica", 5)
-            c.drawCentredString(col_center_x, qr_y + qr_size / 2, "QR Code")
+            c.drawCentredString(col_center_x, current_qr_y + qr_size / 2, "QR Code")
         
         # -- Teks "Ditandatangani secara elektronik" --
         c.setFont("Helvetica", label_font_size)
         c.setFillColor(HexColor("#059669"))
-        c.drawCentredString(col_center_x, label_y, "Ditandatangani secara elektronik")
+        c.drawCentredString(col_center_x, current_label_y, "Ditandatangani secara elektronik")
     
     c.save()
     buf.seek(0)

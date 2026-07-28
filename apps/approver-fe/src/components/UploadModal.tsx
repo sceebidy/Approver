@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { X, UploadCloud, Loader2, AlertCircle, FileText, CheckCircle2, FileUp } from "lucide-react";
+import { X, UploadCloud, Loader2, AlertCircle, FileText, CheckCircle2, FileUp, Plus } from "lucide-react";
 import SsoUserPicker from "@/components/SsoUserPicker";
 import {
   collectApproversFromData,
@@ -567,13 +567,48 @@ function EditableValue({
   }
 
   if (inApprovalRoles || (fieldKey && isApproverFieldKey(fieldKey))) {
+    // Pastikan value selalu berupa array agar bisa multi-select
+    const arr = Array.isArray(value) ? value : [value];
+
     return (
-      <div className="relative">
-        <SsoUserPicker
-          value={value}
-          onChange={onChange}
-          placeholder={`Pilih ${formatApproverFieldLabel(fieldKey || "")}`}
-        />
+      <div className="space-y-2">
+        {arr.map((val, idx) => (
+          <div key={idx} className="flex items-start gap-2">
+            <div className="flex-1 relative">
+              <SsoUserPicker
+                value={val}
+                onChange={(nv) => {
+                  const newArr = [...arr];
+                  newArr[idx] = nv;
+                  // Jika hanya 1 item dan dihapus (kosong), tetap biarkan sebagai array atau string kosong
+                  // agar collectApprovers bisa memprosesnya
+                  onChange(newArr);
+                }}
+                placeholder={`Pilih ${formatApproverFieldLabel(fieldKey || "")}`}
+              />
+            </div>
+            {arr.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const newArr = arr.filter((_, i) => i !== idx);
+                  onChange(newArr);
+                }}
+                className="mt-1 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                title="Hapus approver"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange([...arr, ""])}
+          className="text-[12px] font-medium text-[#1F3A5F] hover:text-[#2B5284] flex items-center gap-1 mt-1 bg-white px-2 py-1 rounded border border-transparent hover:border-[#E3E6EA] transition-colors"
+        >
+          <Plus size={14} /> Tambah Approver Lain
+        </button>
       </div>
     );
   }

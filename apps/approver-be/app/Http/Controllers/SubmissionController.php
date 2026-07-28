@@ -366,6 +366,29 @@ class SubmissionController extends Controller
 
     private function getOrCreateUser($approverData)
     {
+        $authUser = auth()->user();
+
+        // 1. Cek apakah approver yang dipilih adalah user yang sedang login
+        // (Berdasarkan employee_id atau kecocokan nama, berguna jika user login pakai local/seeder account)
+        if ($authUser) {
+            $isSelf = false;
+            if (!empty($approverData['employee_id']) && $authUser->employee_id === $approverData['employee_id']) {
+                $isSelf = true;
+            } elseif (!empty($approverData['name']) && strtolower($authUser->name) === strtolower(trim($approverData['name']))) {
+                $isSelf = true;
+            }
+
+            if ($isSelf) {
+                // Update employee_id user yang sedang login jika sebelumnya kosong
+                if (empty($authUser->employee_id) && !empty($approverData['employee_id'])) {
+                    $authUser->employee_id = $approverData['employee_id'];
+                    $authUser->save();
+                }
+                return $authUser;
+            }
+        }
+
+        // 2. Cari berdasarkan employee_id dari SSO
         if (!empty($approverData['employee_id'])) {
             $user = User::where('employee_id', $approverData['employee_id'])->first();
             if ($user) {
