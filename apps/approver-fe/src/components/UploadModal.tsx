@@ -49,8 +49,39 @@ function buildPayload(docType: 'ppab' | 'po' | 'mis', raw: any): any {
       ? raw.items.map((item: any) => ({
           desc: item.desc ?? '',
           satuan: item.satuan ?? '',
-          // qty bisa berupa string "1.000" dari extractor — coerce ke number
-          qty: parseFloat(String(item.qty ?? '0').replace(/\./g, '').replace(',', '.')) || 0,
+          // qty bisa berupa string "10.000" (Indonesia ribuan) atau "10,000" dari extractor.
+          // Logika: jika ada koma → koma=desimal, titik=ribuan (Indonesia)
+          //         jika hanya titik → cek posisinya: jika tepat 3 digit setelah titik → ribuan, jika tidak → desimal
+          qty: (() => {
+            const raw = String(item.qty ?? '0');
+            if (!raw || raw === '0') return 0;
+            if (raw.includes(',') && raw.includes('.')) {
+              // Format Indonesia: 10.000,50 → hapus titik, ganti koma jadi titik
+              return parseFloat(raw.replace(/\./g, '').replace(',', '.')) || 0;
+            }
+            if (raw.includes(',') && !raw.includes('.')) {
+              // Mungkin: 10,000 (English) atau 10,5 (Indonesia desimal)
+              const commaIdx = raw.lastIndexOf(',');
+              const afterComma = raw.slice(commaIdx + 1);
+              if (afterComma.length === 3 && !afterComma.includes(',')) {
+                // 10,000 → English ribuan
+                return parseFloat(raw.replace(/,/g, '')) || 0;
+              }
+              // 10,5 → Indonesia desimal
+              return parseFloat(raw.replace(',', '.')) || 0;
+            }
+            if (raw.includes('.') && !raw.includes(',')) {
+              const dotIdx = raw.lastIndexOf('.');
+              const afterDot = raw.slice(dotIdx + 1);
+              if (afterDot.length === 3) {
+                // "10.000" → titik adalah ribuan → 10000
+                return parseFloat(raw.replace(/\./g, '')) || 0;
+              }
+              // "10.5" → titik adalah desimal
+              return parseFloat(raw) || 0;
+            }
+            return parseFloat(raw) || 0;
+          })(),
           remark: item.remark ?? null,
         }))
       : [];
@@ -567,34 +598,26 @@ function EditableResultView({ value, onChange, unsupportedKeys }: { value: any; 
   return (
     <div className="space-y-0 divide-y divide-[#E3E6EA]">
       {local && typeof local === 'object' ? (
-        Object.keys(local).map((k) => {
-          const isUnsupported = unsupportedKeys.has(k);
-          return (
-            <div key={k} className="flex flex-col lg:flex-row lg:items-start gap-2 lg:gap-6 py-4 group">
-              <div className="lg:w-1/4 shrink-0 flex flex-col justify-start pt-1">
-                <label className="text-[13px] font-semibold text-slate-700 capitalize tracking-tight">
-                  {k === "approval_roles" ? "Approval Roles" : formatApproverFieldLabel(k)}
-                </label>
-                {isUnsupported ? (
-                  <span className="inline-flex items-center mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200/50 w-max">
-                    Tidak disimpan
-                  </span>
-                ) : null}
-              </div>
-              <div className={`min-w-0 flex-1 w-full ${isUnsupported ? 'opacity-60 grayscale filter' : ''}`}>
-                <EditableValue
-                  fieldKey={k}
-                  value={local[k]}
-                  onChange={(nv) => {
-                    const next = { ...local, [k]: nv };
-                    setLocal(next);
-                    onChange(next);
-                  }}
-                />
-              </div>
+        Object.keys(local).filter((k) => !unsupportedKeys.has(k)).map((k) => (
+          <div key={k} className="flex flex-col lg:flex-row lg:items-start gap-2 lg:gap-6 py-4 group">
+            <div className="lg:w-1/4 shrink-0 flex flex-col justify-start pt-1">
+              <label className="text-[13px] font-semibold text-slate-700 capitalize tracking-tight">
+                {k === "approval_roles" ? "Approval Roles" : formatApproverFieldLabel(k)}
+              </label>
             </div>
-          );
-        })
+            <div className="min-w-0 flex-1 w-full">
+              <EditableValue
+                fieldKey={k}
+                value={local[k]}
+                onChange={(nv) => {
+                  const next = { ...local, [k]: nv };
+                  setLocal(next);
+                  onChange(next);
+                }}
+              />
+            </div>
+          </div>
+        ))
       ) : (
         <div className="text-sm text-slate-800 font-medium">{String(local)}</div>
       )}

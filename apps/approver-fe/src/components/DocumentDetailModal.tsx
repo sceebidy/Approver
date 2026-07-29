@@ -297,8 +297,14 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                     )}
                     {docType === 'mis' && (
                       <>
+                        <span className="text-[#6B7280]">Nomor MIS</span>
+                        <span className="font-medium text-[#111827] font-mono text-[12px]">{data.nomor_mis || '-'}</span>
+
                         <span className="text-[#6B7280]">Tanggal MIS</span>
                         <span className="font-medium text-[#111827]">{data.tgl_mis ? new Date(data.tgl_mis).toLocaleDateString('id-ID', { dateStyle: 'long' }) : '-'}</span>
+
+                        <span className="text-[#6B7280]">Jumlah Item</span>
+                        <span className="font-medium text-[#111827]">{actualItems.length} item</span>
                       </>
                     )}
                     {docType === 'fr' && (
