@@ -110,6 +110,7 @@ class SubmissionController extends Controller
                     'nomor_po' => $data['nomor_po'] ?? 'PO-' . time(),
                     'nomor_ppab' => $data['nomor_ppab'] ?? null,
                     'vendor' => $data['vendor'] ?? 'Unknown Vendor',
+                    'source_pdf_path' => $data['source_pdf_path'] ?? null,
                 ]);
                 $documentId = $po->id;
 
@@ -138,6 +139,7 @@ class SubmissionController extends Controller
                     'user_id' => $user->id,
                     'nomor_mis' => $data['nomor_mis'] ?? 'MIS-' . time(),
                     'tgl_mis' => $data['tgl_mis'] ?? now()->toDateString(),
+                    'source_pdf_path' => $data['source_pdf_path'] ?? null,
                 ]);
                 $documentId = $mis->id;
 

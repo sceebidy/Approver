@@ -61,6 +61,7 @@ class PoController extends Controller
             'nomor_po' => 'required|string|max:255|unique:po,nomor_po',
             'vendor' => 'required|string|max:255',
             'nomor_ppab' => 'nullable|string|max:255',
+            'source_pdf_path' => 'nullable|string|max:500',
             'user_id' => 'nullable|integer|exists:users,id',
             'items' => 'required|array|min:1',
             'items.*.deskripsi' => 'required|string',
@@ -93,6 +94,7 @@ class PoController extends Controller
                 'nomor_po' => $data['nomor_po'],
                 'nomor_ppab' => $data['nomor_ppab'] ?? null,
                 'vendor' => $data['vendor'],
+                'source_pdf_path' => $data['source_pdf_path'] ?? null,
             ]);
 
             foreach ($data['items'] as $item) {

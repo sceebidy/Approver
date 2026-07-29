@@ -15,7 +15,8 @@ class Po extends Model
         'user_id',
         'nomor_po',
         'nomor_ppab',
-        'vendor'
+        'vendor',
+        'source_pdf_path',
     ];
 
     public function user()

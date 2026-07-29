@@ -87,4 +87,9 @@ def parse(text: str) -> dict:
     m = re.search(r"(?<!Sub)Total\s+Rp\s+([\d.,]+)", text)
     data["total"] = clean_num(m.group(1)) if m else None
 
+    vendor_nama = data.get("vendor_nama") or "SIGMA CIPTA CARAKA"
+    data["approval_roles"] = {
+        "approved_by": ""
+    }
+
     return data

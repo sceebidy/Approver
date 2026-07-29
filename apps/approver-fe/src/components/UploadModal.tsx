@@ -206,6 +206,18 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    // Reset all extraction-related states when a new file is chosen or cleared
+    setStatus(null);
+    setErrorMessage(null);
+    setValidationErrors(null);
+    setSuccessMessage(null);
+    setResult(null);
+    setEditableResult(null);
+    setSourcePdfPath(null);
+    setShowPreview(false);
+  }, [file]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!file) {
