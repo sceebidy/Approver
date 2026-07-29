@@ -4,6 +4,7 @@ import json
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.responses import Response
+# pyrefly: ignore [missing-import]
 import pdfplumber
 
 from parsers.detector import parse_document

@@ -110,6 +110,7 @@ class SubmissionController extends Controller
                     'nomor_po' => $data['nomor_po'] ?? 'PO-' . time(),
                     'nomor_ppab' => $data['nomor_ppab'] ?? null,
                     'vendor' => $data['vendor'] ?? 'Unknown Vendor',
+                    'source_pdf_path' => $data['source_pdf_path'] ?? null,
                 ]);
                 $documentId = $po->id;
 

@@ -90,7 +90,7 @@ class DocumentSigningController extends Controller
             'documentNumber' => $docNumber,
             'approverName'   => $approverUser->name ?? 'User #' . $approverLine->approver_id,
             'approverRole'   => $approverLine->role ?? $approverUser->role ?? 'Approver',
-            'signedAt'       => $approverLine->signed_at ? Carbon::parse($approverLine->signed_at)->format('d F Y H:i:s') : '-',
+            'signedAt'       => $approverLine->signed_at ? Carbon::parse($approverLine->signed_at, 'UTC')->setTimezone('Asia/Jakarta')->format('d F Y H:i:s') : '-',
         ]);
     }
 

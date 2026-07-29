@@ -60,7 +60,7 @@ class MisController extends Controller
         $data = $request->validate([
             'nomor_mis' => 'required|string|max:255|unique:mis,nomor_mis',
             'tgl_mis' => 'required|string',
-            'source_pdf_path' => 'nullable|string',
+            'source_pdf_path' => 'nullable|string|max:500',
             'user_id' => 'nullable|integer|exists:users,id',
             'items' => 'required|array|min:1',
             'items.*.desc' => 'required|string',
@@ -78,7 +78,7 @@ class MisController extends Controller
         if (!$tglMis) {
             return response()->json([
                 'success' => false,
-                'message' => 'Format tgl_mis harus dd/mm/YYYY atau YYYY-mm-dd.',
+                'message' => 'Format tgl_mis harus dd/mm/YYYY or YYYY-mm-dd.',
             ], 422);
         }
 

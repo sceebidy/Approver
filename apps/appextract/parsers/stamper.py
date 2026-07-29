@@ -43,7 +43,7 @@ def _generate_qr_image(data: str, size: int = 120) -> io.BytesIO:
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
+    img.save(buf)
     buf.seek(0)
     return buf
 
@@ -52,6 +52,12 @@ def _detect_signature_boxes_from_pdf(source_pdf_bytes: bytes, page_idx: int = -1
     """
     Secara dinamis mendeteksi koordinat X pusat kolom dan Y range (top/bottom) 
     dari kotak tanda tangan di halaman PDF menggunakan pdfplumber.
+    
+    Mendukung template khusus untuk:
+    - PPAB (Permintaan Pemakaian Anggaran Belanja - Landscape/Header Top Box)
+    - MIS (Material Issued Slip - Portrait/Mid-Top Header Box)
+    - PO V1 (Purchase Order INL - Portrait/Bottom Box)
+    - PO V2 (Purchase Order SAP/PTPN - Portrait/Fixed Box)
     
     Returns:
         (column_centers, box_top_y, box_bottom_y) dalam koordinat ReportLab (0 di bawah).
@@ -69,87 +75,119 @@ def _detect_signature_boxes_from_pdf(source_pdf_bytes: bytes, page_idx: int = -1
             page_height = float(page.height)
             page_width = float(page.width)
             
+            # Extract text dari seluruh dokumen untuk menentukan jenis dokumen secara akurat
+            full_text = "\n".join(p.extract_text() or "" for p in pdf.pages)
+            upper_squished = full_text.upper().replace(" ", "")
+            
+            # 1. PO V2 (Purchase Order SAP / PTPN Varian)
+            if "PURCHASEORDER" in upper_squished and "NOPO:" in upper_squished:
+                column_centers = [149.10, 319.38, 418.38, 517.38]
+                box_top_y = page_height - 435.60
+                box_bottom_y = page_height - 496.80
+                return column_centers, box_top_y, box_bottom_y
+
             words = page.extract_words()
-            
-            # Coba deteksi MIS signature box terlebih dahulu (cari 'Checked By', 'Issued By', dll)
-            header_words = [w for w in words if 'Checked' in w['text'] or 'Issued' in w['text'] or 'Approved' in w['text'] or 'Requested' in w['text']]
-            if header_words:
-                # Ini kemungkinan besar adalah form MIS
-                header_bottom = max(w['bottom'] for w in header_words)
-                box_top_pdf = header_bottom + 1.5
-                box_bottom_pdf = box_top_pdf + 60.0
-                box_top_y = page_height - box_top_pdf
-                box_bottom_y = page_height - box_bottom_pdf
+
+            # 2. MIS (Material Issued Slip)
+            if "MATERIALISSUEDSLIP" in upper_squished or ("MIS" in upper_squished and any(k in upper_squished for k in ["REQUESTED/RECEIVEDBY", "CHECKEDBY", "ISSUEDBY"])):
+                header_words = [w for w in words if any(k in w['text'].lower() for k in ['requested', 'checkedby', 'issuedby', 'approvedby'])]
+                if header_words:
+                    header_bottom = max(w['bottom'] for w in header_words)
+                    box_top_pdf = header_bottom + 1.5
+                    box_bottom_pdf = box_top_pdf + 60.0
+                    box_top_y = page_height - box_top_pdf
+                    box_bottom_y = page_height - box_bottom_pdf
+                    
+                    lines = page.lines
+                    v_lines = [l for l in lines if l['top'] <= box_top_pdf + 10 and l['bottom'] >= box_bottom_pdf - 10 and abs(l['x0'] - l['x1']) < 2]
+                    v_lines = sorted(v_lines, key=lambda l: l['x0'])
+                    
+                    unique_x = []
+                    for vl in v_lines:
+                        if not unique_x or abs(vl['x0'] - unique_x[-1]) > 5:
+                            unique_x.append(vl['x0'])
+                            
+                    if len(unique_x) >= 2:
+                        column_centers = [(unique_x[i] + unique_x[i+1]) / 2.0 for i in range(len(unique_x) - 1)]
+                        return column_centers, box_top_y, box_bottom_y
+                    
+                    return [80.8, 188.5, 296.2, 403.9, 511.6], box_top_y, box_bottom_y
+                return [80.8, 188.5, 296.2, 403.9, 511.6], page_height - 264.4, page_height - 324.4
+
+            # 3. PPAB (Permintaan Pemakaian Anggaran Belanja)
+            if "PPAB" in upper_squished or "PEMAKAIANANGGARANBELANJA" in upper_squished:
+                tgl_words = [w for w in words if 'tgl' in w['text'].lower()]
+                tgl_words = sorted(tgl_words, key=lambda w: w['x0'])
                 
-                # Deteksi garis vertikal untuk kolom MIS
-                lines = page.lines
-                v_lines = [l for l in lines if l['top'] <= box_top_pdf + 10 and l['bottom'] >= box_bottom_pdf - 10 and abs(l['x0'] - l['x1']) < 2]
-                v_lines = sorted(v_lines, key=lambda l: l['x0'])
-                
-                unique_x = []
-                for vl in v_lines:
-                    if not unique_x or abs(vl['x0'] - unique_x[-1]) > 5:
-                        unique_x.append(vl['x0'])
-                        
-                if len(unique_x) >= 2:
-                    column_centers = []
-                    for i in range(len(unique_x) - 1):
-                        column_centers.append((unique_x[i] + unique_x[i+1]) / 2.0)
-                    return column_centers, box_top_y, box_bottom_y
-                
-                # Fallback centers for MIS
-                return [99, 289, 498, 640, 750], box_top_y, box_bottom_y
-            
-            # Jika bukan MIS, coba cari kata 'Tgl' atau 'Tgl:' yang menandai awal kotak tanda tangan (PPAB, dll)
-            tgl_words = [w for w in words if 'Tgl' in w['text']]
-            # Filter tgl_words yang letaknya di bagian atas halaman (header) untuk menghindari salah deteksi seperti "Tgl. Berlaku" pada form lain
-            # Biasanya kotak tanda tangan ada di setengah bagian bawah halaman
-            tgl_words = [w for w in tgl_words if w['top'] > page_height / 3]
-            tgl_words = sorted(tgl_words, key=lambda w: w['x0'])
-            
-            if len(tgl_words) >= 1:
-                # Top dari kotak tanda tangan (di bawah teks 'Tgl')
-                box_top_pdf = max(w['bottom'] for w in tgl_words) + 1.5
-                
-                # Cari garis horizontal di bawah 'Tgl' sebagai batas bawah kotak tanda tangan
-                lines = page.lines
-                h_lines = [l for l in lines if l['top'] > box_top_pdf and abs(l['top'] - l['bottom']) < 2]
-                h_lines = sorted(h_lines, key=lambda l: l['top'])
-                
-                if h_lines:
-                    box_bottom_pdf = h_lines[0]['top'] - 1.0
-                else:
-                    # Cari kata 'Batasan' sebagai alternatif pembatas bawah
-                    batasan_words = [w for w in words if 'Batasan' in w['text']]
-                    if batasan_words:
-                        box_bottom_pdf = batasan_words[0]['top'] - 3.0
+                if len(tgl_words) >= 1:
+                    levels = {}
+                    for w in tgl_words:
+                        matched_level = None
+                        for lvl in levels:
+                            if abs(w['top'] - lvl) < 15:
+                                matched_level = lvl
+                                break
+                        if matched_level is None:
+                            levels[w['top']] = [w]
+                        else:
+                            levels[matched_level].append(w)
+                    
+                    best_level = max(levels.keys(), key=lambda k: len(levels[k]))
+                    best_words = sorted(levels[best_level], key=lambda w: w['x0'])
+                    
+                    box_top_pdf = max(w['bottom'] for w in best_words) + 1.5
+                    
+                    lines = page.lines
+                    h_lines = [l for l in lines if l['top'] > box_top_pdf and abs(l['top'] - l['bottom']) < 2]
+                    h_lines = sorted(h_lines, key=lambda l: l['top'])
+                    
+                    if h_lines:
+                        box_bottom_pdf = h_lines[0]['top'] - 1.0
                     else:
                         box_bottom_pdf = box_top_pdf + 55.0
-                
-                # Konversi ke koordinat ReportLab (Y=0 di bawah)
-                box_top_y = page_height - box_top_pdf
-                box_bottom_y = page_height - box_bottom_pdf
-                
-                # Hitung X centers untuk tiap kolom
-                column_centers = []
-                for i, w in enumerate(tgl_words):
-                    x_start = w['x0'] - 5.0
-                    if i < len(tgl_words) - 1:
-                        x_end = tgl_words[i+1]['x0'] - 5.0
-                    else:
-                        # Kolom terakhir
-                        x_end = page_width - 12.0
-                    column_centers.append((x_start + x_end) / 2.0)
-                
-                return column_centers, box_top_y, box_bottom_y
-                
-                
+                        
+                    box_top_y = page_height - box_top_pdf
+                    box_bottom_y = page_height - box_bottom_pdf
+                    
+                    if len(best_words) >= 4:
+                        column_centers = []
+                        for i, w in enumerate(best_words):
+                            x_start = w['x0'] - 5.0
+                            x_end = best_words[i+1]['x0'] - 5.0 if i < len(best_words) - 1 else page_width - 12.0
+                            column_centers.append((x_start + x_end) / 2.0)
+                        return column_centers, box_top_y, box_bottom_y
+                        
+                return [104.0, 295.0, 504.0, 715.0], page_height - 152.0, page_height - 218.0
+
+            # 4. PO V1 (Purchase Order INL Varian 1)
+            if "PURCHASEORDER" in upper_squished:
+                sig_words = [w for w in words if any(k in w['text'].lower() for k in ['acceptedby', 'preparedby', 'checkedby', 'approvedby', 'supplier', 'vendor'])]
+                sig_words = [w for w in sig_words if w['top'] > page_height * 0.5]
+                if sig_words:
+                    header_bottom = max(w['bottom'] for w in sig_words)
+                    box_top_pdf = header_bottom + 2.0
+                    box_bottom_pdf = box_top_pdf + 60.0
+                    box_top_y = page_height - box_top_pdf
+                    box_bottom_y = page_height - box_bottom_pdf
+                    return [85.0, 226.7, 368.6, 510.5], box_top_y, box_bottom_y
+                return [85.0, 226.7, 368.6, 510.5], page_height - 576.0, page_height - 635.0
+
     except Exception as e:
         import logging
         logging.warning(f"Gagal deteksi dinamis posisi tanda tangan: {e}")
-
+        
     # Fallback default jika deteksi dinamis gagal
-    return [99.18, 289.08, 498.84, 717.12], 222.0, 151.08
+    try:
+        with pdfplumber.open(io.BytesIO(source_pdf_bytes)) as pdf:
+            page = pdf.pages[page_idx if page_idx >= 0 else len(pdf.pages) + page_idx]
+            page_width = float(page.width)
+    except Exception:
+        page_width = 841.92 # Default to landscape
+        
+    if page_width > 700:
+        return [104.0, 295.0, 504.0, 715.0], 443.0, 377.0
+    else:
+        return [85.0, 226.7, 368.6, 510.5], 266.0, 206.0
 
 
 def _create_stamp_overlay(
@@ -179,15 +217,14 @@ def _create_stamp_overlay(
     total_content_height = qr_size + gap + label_font_size
     box_height = abs(box_top_y - box_bottom_y)
     
-    # Hitung posisi Y agar QR code & label di dalam kotak
-    # offset_up negatif akan menurunkan posisi QR
-    offset_up = -15.0
-    start_y = box_top_y - ((box_height - total_content_height) / 2.0) + offset_up
+    # Hitung posisi Y agar QR code & label di dalam kotak (center secara vertikal)
+    start_y = box_top_y - ((box_height - total_content_height) / 2.0)
     qr_y = start_y - qr_size
     label_y = qr_y - gap - (label_font_size / 2.0)
 
-    # Mapping for PPAB approval roles to physical columns (0-indexed)
+    # Mapping for PPAB/PO/MIS approval roles to physical columns (0-indexed)
     role_col_mapping = {
+        # PPAB
         "pelaksanaan_disetujui_oleh": [0],
         "pelaksanaan disetujui oleh": [0],
         "diperiksa_oleh": [1, 2],
@@ -198,6 +235,23 @@ def _create_stamp_overlay(
         "checker": [1],
         "issuer": [2],
         "approver": [3, 4],
+
+        # PO
+        "accepted_by": [0],
+        "accepted by": [0],
+        "prepared_by": [1],
+        "prepared by": [1],
+        "checked_by": [2],
+        "checked by": [2],
+        "approved_by": [3],
+        "approved by": [3],
+
+        # MIS
+        "requested_received_by": [0],
+        "requested/receivedby": [0],
+        "requested received by": [0],
+        "issued_by": [2],
+        "issued by": [2],
     }
     
     # Track how many people are in each physical column so we can stack if necessary
@@ -238,8 +292,28 @@ def _create_stamp_overlay(
             
     role_counts = {}
 
+    is_po_v2 = (len(column_centers) == 4 and abs(column_centers[0] - 149.10) < 1.0 and abs(column_centers[2] - 418.38) < 1.0)
+    internal_approvers = [a for a in final_approvers if a[1] not in ["accepted_by", "accepted by"]]
+    num_internal = len(internal_approvers)
+
     for approver, role_key in final_approvers:
-        if role_key in role_col_mapping:
+        if is_po_v2:
+            if role_key in ["accepted_by", "accepted by"]:
+                col_idx = 0
+            else:
+                if num_internal == 1:
+                    col_idx = 2  # Center of purchaser box
+                else:
+                    po_v2_role_map = {
+                        "prepared_by": 1,
+                        "prepared by": 1,
+                        "checked_by": 2,
+                        "checked by": 2,
+                        "approved_by": 3,
+                        "approved by": 3
+                    }
+                    col_idx = po_v2_role_map.get(role_key, 2)
+        elif role_key in role_col_mapping:
             allowed_cols = role_col_mapping[role_key]
             count = role_counts.get(role_key, 0)
             col_idx = allowed_cols[min(count, len(allowed_cols) - 1)]

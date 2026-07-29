@@ -131,7 +131,7 @@ class DocumentSigningService
                 'role'         => str_replace('_', ' ', $line->role ?? 'Approver'),
                 'name'         => $approverUser->name ?? 'User #' . $line->approver_id,
                 'jabatan'      => $approverUser->role ?? $approverUser->unit_nama ?? 'Pejabat Berwenang',
-                'signed_at'    => $line->signed_at ? \Carbon\Carbon::parse($line->signed_at)->format('d/m/Y H:i') : now()->format('d/m/Y H:i'),
+                'signed_at'    => $line->signed_at ? \Carbon\Carbon::parse($line->signed_at)->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') : now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i'),
                 'qr_code_base64' => $qrBase64,
                 'verify_url'     => $verifyUrl,
             ];
@@ -143,7 +143,7 @@ class DocumentSigningService
         // ======================================================================
         $hasSourcePdf = !empty($document->source_pdf_path);
         
-        if ($hasSourcePdf && in_array($documentType, ['ppab', 'mis'])) {
+        if ($hasSourcePdf && in_array($documentType, ['ppab', 'po', 'mis'])) {
             $filePath = $this->stampSourcePdf($documentType, $document, $signedApprovers);
             if ($filePath) {
                 return $filePath;
