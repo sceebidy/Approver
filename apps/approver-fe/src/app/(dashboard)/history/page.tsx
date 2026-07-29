@@ -17,6 +17,8 @@ import {
 import Link from "next/link";
 import { useDocumentList } from "@/lib/useDocumentList";
 import DocumentDetailModal from "@/components/DocumentDetailModal";
+import DateRangeFilter from "@/components/DateRangeFilter";
+import { isDateInRange } from "@/lib/dateUtils";
 
 type DocTypeFilter = "ALL" | "PPAB" | "PO" | "MIS" | "FR" | "FS";
 type DocStatusFilter = "ALL" | "approved" | "pending" | "rejected";
@@ -27,6 +29,8 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<DocTypeFilter>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<DocStatusFilter>("ALL");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [selectedDoc, setSelectedDoc] = useState<{ id: number; type: "ppab" | "po" | "mis" | "fr" | "fs" } | null>(null);
 
   // Filtered documents calculation
@@ -40,6 +44,12 @@ export default function HistoryPage() {
       if (selectedStatus !== "ALL" && (doc.status || "pending").toLowerCase() !== selectedStatus.toLowerCase()) {
         return false;
       }
+      // Date range filter
+      if (startDate || endDate) {
+        if (!isDateInRange(doc.created_at, startDate, endDate)) {
+          return false;
+        }
+      }
       // Search term filter
       if (searchTerm.trim() !== "") {
         const query = searchTerm.toLowerCase();
@@ -50,7 +60,7 @@ export default function HistoryPage() {
       }
       return true;
     });
-  }, [historyDocs, selectedType, selectedStatus, searchTerm]);
+  }, [historyDocs, selectedType, selectedStatus, searchTerm, startDate, endDate]);
 
   // Counts for tabs
   const typeCounts = useMemo(() => {
@@ -99,7 +109,7 @@ export default function HistoryPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white rounded-xl border border-[#E3E6EA] p-4 md:p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] space-y-4">
+      <div className="bg-white rounded-xl border border-[#E3E6EA] p-4 md:p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] space-y-4 relative z-30">
         {/* Document Type Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-thin">
           {(["ALL", "PPAB", "PO", "MIS", "FR", "FS"] as DocTypeFilter[]).map((type) => {
@@ -147,6 +157,16 @@ export default function HistoryPage() {
             )}
           </div>
 
+          {/* Date Range Filter */}
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(s, e) => {
+              setStartDate(s);
+              setEndDate(e);
+            }}
+          />
+
           {/* Status Select */}
           <div className="flex items-center gap-2 shrink-0">
             <Filter size={16} className="text-[#6B7280]" />
@@ -191,16 +211,18 @@ export default function HistoryPage() {
               </div>
               <h4 className="text-[15px] font-bold text-[#111827]">Tidak Ada Dokumen Ditemukan</h4>
               <p className="text-[13px] text-[#6B7280] max-w-sm">
-                {searchTerm || selectedType !== "ALL" || selectedStatus !== "ALL"
-                  ? "Coba ubah kata kunci pencarian atau sesuaikan filter status dan tipe dokumen."
+                {searchTerm || selectedType !== "ALL" || selectedStatus !== "ALL" || startDate || endDate
+                  ? "Coba ubah kata kunci pencarian atau sesuaikan rentang tanggal, filter status, dan tipe dokumen."
                   : "Anda belum memiliki riwayat pengajuan atau persetujuan dokumen."}
               </p>
-              {(searchTerm || selectedType !== "ALL" || selectedStatus !== "ALL") && (
+              {(searchTerm || selectedType !== "ALL" || selectedStatus !== "ALL" || startDate || endDate) && (
                 <button
                   onClick={() => {
                     setSearchTerm("");
                     setSelectedType("ALL");
                     setSelectedStatus("ALL");
+                    setStartDate("");
+                    setEndDate("");
                   }}
                   className="mt-2 text-[13px] font-semibold text-[#1F3A5F] hover:underline"
                 >

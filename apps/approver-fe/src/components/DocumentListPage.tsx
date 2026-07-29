@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Search, Plus, ChevronDown, Loader2, AlertCircle, FileText, X } from "lucide-react";
 import StatusBadge from "./StatusBadge";
+import DateRangeFilter from "./DateRangeFilter";
+import { isDateInRange } from "@/lib/dateUtils";
 
 export interface DocColumn {
   key: string;
@@ -47,7 +49,8 @@ const tabs = [
 export default function DocumentListPage({ title, subtitle, docType, createLabel, createHref, createNode, columns, rows, loading, error, onDelete, onRowClick }: Props) {
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [deletingRow, setDeletingRow] = useState<DocRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -66,12 +69,10 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
       if (!matchesSearch) return false;
     }
 
-    if (dateFilter && r.created_at) {
-      try {
-        const rowDate = new Date(r.created_at).toISOString().split('T')[0];
-        if (rowDate !== dateFilter) return false;
-      } catch (e) {
-        // ignore invalid dates
+    if (startDate || endDate) {
+      const dateVal = r.created_at || r.tgl_mis || r.tgl_po || r.tgl_ppab;
+      if (!isDateInRange(dateVal, startDate, endDate)) {
+        return false;
       }
     }
 
@@ -134,9 +135,9 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-[#E3E6EA] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] overflow-hidden transition-all">
+      <div className="bg-white rounded-xl border border-[#E3E6EA] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all">
         {/* Filters and Tabs */}
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between px-5 py-4 border-b border-[#E3E6EA] gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between px-5 py-4 border-b border-[#E3E6EA] gap-4 relative z-30 bg-white rounded-t-xl">
           <div className="w-full xl:w-auto overflow-x-auto pb-1 -mb-1 scrollbar-hide">
             <div className="flex items-center p-1 bg-[#F8F9FB] rounded-lg border border-[#E3E6EA]/80 w-max">
             {tabs.map((t) => (
@@ -167,24 +168,14 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none" />
             </div>
-            <div className="relative w-full sm:w-auto flex items-center gap-2">
-              <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full sm:w-auto text-[13px] text-[#4B5563] bg-[#F8F9FB] border border-[#E3E6EA] rounded-lg px-3 py-2 hover:bg-white hover:border-[#D1D5DB] focus:bg-white focus:border-[#1F3A5F]/40 focus:ring-2 focus:ring-[#1F3A5F]/10 outline-none cursor-pointer transition-all"
-                title="Filter by date"
-              />
-              {dateFilter && (
-                <button 
-                  onClick={() => setDateFilter("")}
-                  className="p-1.5 text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg transition-all flex-shrink-0"
-                  title="Clear date filter"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(s, e) => {
+                setStartDate(s);
+                setEndDate(e);
+              }}
+            />
             <div className="relative w-full sm:w-auto">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
               <input
@@ -217,7 +208,7 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
             <p className="text-[12.5px] text-[#9CA3AF]">Data {title} yang sesuai tidak ditemukan.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-b-xl">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#6B7280] bg-[#F8F9FB] border-b border-[#E3E6EA]">
