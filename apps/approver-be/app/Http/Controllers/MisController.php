@@ -60,6 +60,7 @@ class MisController extends Controller
         $data = $request->validate([
             'nomor_mis' => 'required|string|max:255|unique:mis,nomor_mis',
             'tgl_mis' => 'required|string',
+            'source_pdf_path' => 'nullable|string',
             'user_id' => 'nullable|integer|exists:users,id',
             'items' => 'required|array|min:1',
             'items.*.desc' => 'required|string',
@@ -94,6 +95,7 @@ class MisController extends Controller
                 'user_id' => $userId,
                 'nomor_mis' => $data['nomor_mis'],
                 'tgl_mis' => $tglMis->format('Y-m-d'),
+                'source_pdf_path' => $data['source_pdf_path'] ?? null,
             ]);
 
             foreach ($data['items'] as $item) {

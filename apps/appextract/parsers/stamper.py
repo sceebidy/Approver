@@ -71,8 +71,40 @@ def _detect_signature_boxes_from_pdf(source_pdf_bytes: bytes, page_idx: int = -1
             
             words = page.extract_words()
             
-            # Cari kata 'Tgl' atau 'Tgl:' yang menandai awal kotak tanda tangan
+            # Coba deteksi MIS signature box terlebih dahulu (cari 'Checked By', 'Issued By', dll)
+            header_words = [w for w in words if 'Checked' in w['text'] or 'Issued' in w['text'] or 'Approved' in w['text'] or 'Requested' in w['text']]
+            if header_words:
+                # Ini kemungkinan besar adalah form MIS
+                header_bottom = max(w['bottom'] for w in header_words)
+                box_top_pdf = header_bottom + 1.5
+                box_bottom_pdf = box_top_pdf + 60.0
+                box_top_y = page_height - box_top_pdf
+                box_bottom_y = page_height - box_bottom_pdf
+                
+                # Deteksi garis vertikal untuk kolom MIS
+                lines = page.lines
+                v_lines = [l for l in lines if l['top'] <= box_top_pdf + 10 and l['bottom'] >= box_bottom_pdf - 10 and abs(l['x0'] - l['x1']) < 2]
+                v_lines = sorted(v_lines, key=lambda l: l['x0'])
+                
+                unique_x = []
+                for vl in v_lines:
+                    if not unique_x or abs(vl['x0'] - unique_x[-1]) > 5:
+                        unique_x.append(vl['x0'])
+                        
+                if len(unique_x) >= 2:
+                    column_centers = []
+                    for i in range(len(unique_x) - 1):
+                        column_centers.append((unique_x[i] + unique_x[i+1]) / 2.0)
+                    return column_centers, box_top_y, box_bottom_y
+                
+                # Fallback centers for MIS
+                return [99, 289, 498, 640, 750], box_top_y, box_bottom_y
+            
+            # Jika bukan MIS, coba cari kata 'Tgl' atau 'Tgl:' yang menandai awal kotak tanda tangan (PPAB, dll)
             tgl_words = [w for w in words if 'Tgl' in w['text']]
+            # Filter tgl_words yang letaknya di bagian atas halaman (header) untuk menghindari salah deteksi seperti "Tgl. Berlaku" pada form lain
+            # Biasanya kotak tanda tangan ada di setengah bagian bawah halaman
+            tgl_words = [w for w in tgl_words if w['top'] > page_height / 3]
             tgl_words = sorted(tgl_words, key=lambda w: w['x0'])
             
             if len(tgl_words) >= 1:
@@ -111,6 +143,7 @@ def _detect_signature_boxes_from_pdf(source_pdf_bytes: bytes, page_idx: int = -1
                 
                 return column_centers, box_top_y, box_bottom_y
                 
+                
     except Exception as e:
         import logging
         logging.warning(f"Gagal deteksi dinamis posisi tanda tangan: {e}")
@@ -146,8 +179,9 @@ def _create_stamp_overlay(
     total_content_height = qr_size + gap + label_font_size
     box_height = abs(box_top_y - box_bottom_y)
     
-    # Hitung posisi Y agar QR code & label di dalam kotak, dengan offset ke atas +5pt
-    offset_up = 5.0
+    # Hitung posisi Y agar QR code & label di dalam kotak
+    # offset_up negatif akan menurunkan posisi QR
+    offset_up = -15.0
     start_y = box_top_y - ((box_height - total_content_height) / 2.0) + offset_up
     qr_y = start_y - qr_size
     label_y = qr_y - gap - (label_font_size / 2.0)
@@ -160,6 +194,10 @@ def _create_stamp_overlay(
         "diperiksa oleh": [1, 2],
         "anggaran_disetujui_oleh": [3],
         "anggaran disetujui oleh": [3],
+        "requestor": [0],
+        "checker": [1],
+        "issuer": [2],
+        "approver": [3, 4],
     }
     
     # Track how many people are in each physical column so we can stack if necessary

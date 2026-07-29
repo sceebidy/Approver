@@ -44,25 +44,25 @@ def parse(text: str, layout_text: str = "") -> dict:
     
     if len(roles) >= 5:
         data["approval_roles"] = {
-            "requested_received_by": roles[0],
-            "checked_by": roles[1],
-            "issued_by": roles[2],
-            "approved_by": f"{roles[3]}, {roles[4]}"
+            "requestor": roles[0],
+            "checker": roles[1],
+            "issuer": roles[2],
+            "approver": f"{roles[3]}, {roles[4]}"
         }
     elif len(roles) >= 4:
         data["approval_roles"] = {
-            "requested_received_by": roles[0],
-            "checked_by": roles[1],
-            "issued_by": roles[2],
-            "approved_by": roles[3]
+            "requestor": roles[0],
+            "checker": roles[1],
+            "issuer": roles[2],
+            "approver": roles[3]
         }
     else:
         # Fallback if it fails
         data["approval_roles"] = {
-            "requested_received_by": "",
-            "checked_by": "",
-            "issued_by": "",
-            "approved_by": ""
+            "requestor": "",
+            "checker": "",
+            "issuer": "",
+            "approver": ""
         }
     
     return data

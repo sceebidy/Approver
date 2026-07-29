@@ -143,7 +143,7 @@ class DocumentSigningService
         // ======================================================================
         $hasSourcePdf = !empty($document->source_pdf_path);
         
-        if ($hasSourcePdf && $documentType === 'ppab') {
+        if ($hasSourcePdf && in_array($documentType, ['ppab', 'mis'])) {
             $filePath = $this->stampSourcePdf($documentType, $document, $signedApprovers);
             if ($filePath) {
                 return $filePath;

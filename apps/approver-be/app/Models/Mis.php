@@ -14,7 +14,9 @@ class Mis extends Model
     protected $fillable = [
         'user_id',
         'nomor_mis',
-        'tgl_mis'
+        'tgl_mis',
+        'source_pdf_path',
+        'signed_pdf_path',
     ];
 
     protected $casts = [

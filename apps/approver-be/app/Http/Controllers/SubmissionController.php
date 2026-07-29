@@ -134,10 +134,25 @@ class SubmissionController extends Controller
                     ]);
                 }
             } elseif ($type === 'mis') {
+                $tglMisStr = $data['tgl_mis'] ?? null;
+                $tglMis = now()->toDateString();
+                if ($tglMisStr) {
+                    try {
+                        if (str_contains($tglMisStr, '/')) {
+                            $tglMis = \Illuminate\Support\Carbon::createFromFormat('d/m/Y', $tglMisStr)->format('Y-m-d');
+                        } else {
+                            $tglMis = \Illuminate\Support\Carbon::parse($tglMisStr)->format('Y-m-d');
+                        }
+                    } catch (\Exception $e) {
+                        // ignore and use fallback
+                    }
+                }
+
                 $mis = Mis::create([
                     'user_id' => $user->id,
                     'nomor_mis' => $data['nomor_mis'] ?? 'MIS-' . time(),
-                    'tgl_mis' => $data['tgl_mis'] ?? now()->toDateString(),
+                    'tgl_mis' => $tglMis,
+                    'source_pdf_path' => $data['source_pdf_path'] ?? null,
                 ]);
                 $documentId = $mis->id;
 
