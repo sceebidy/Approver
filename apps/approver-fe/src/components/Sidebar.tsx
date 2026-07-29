@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { LayoutGrid, ClipboardList, FileText, CheckCircle2, Wallet, User, LogOut, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutGrid, ClipboardList, FileText, CheckCircle2, Wallet, User, LogOut, Menu, X, ChevronLeft, ChevronRight, History } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 function NavItem({ icon: Icon, label, href, onClick, isCollapsed }: { icon: LucideIcon; label: string; href: string; onClick?: () => void; isCollapsed?: boolean }) {
@@ -132,6 +132,7 @@ export default function Sidebar() {
         )}
       
         <NavItem icon={LayoutGrid} label="Dashboard" href="/" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
+        <NavItem icon={History} label="Riwayat Dokumen" href="/history" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
         
         <div className={`pt-5 pb-2 ${collapsed ? "px-0 text-center" : "px-3"} text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]`}>
           {collapsed ? "..." : "Procurement"}

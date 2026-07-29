@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/submissions', [\App\Http\Controllers\SubmissionController::class, 'create']);
     Route::get('/submissions/pending', [\App\Http\Controllers\SubmissionController::class, 'pendingApprovals']);
     Route::get('/submissions/recent', [\App\Http\Controllers\SubmissionController::class, 'recentDocuments']);
+    Route::get('/submissions/history', [\App\Http\Controllers\SubmissionController::class, 'allHistory']);
     Route::post('/submissions/{type}/{lineId}/approve', [\App\Http\Controllers\SubmissionController::class, 'approve']);
     Route::post('/submissions/{type}/{lineId}/reject', [\App\Http\Controllers\SubmissionController::class, 'reject']);
 

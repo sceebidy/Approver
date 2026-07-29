@@ -93,12 +93,30 @@ def _detect_signature_boxes_from_pdf(source_pdf_bytes: bytes, page_idx: int = -1
                 header_words = [w for w in words if any(k in w['text'].lower() for k in ['requested', 'checkedby', 'issuedby', 'approvedby'])]
                 if header_words:
                     header_bottom = max(w['bottom'] for w in header_words)
-                    box_top_pdf = header_bottom + 1.5
-                    box_bottom_pdf = box_top_pdf + 60.0
+                    
+                    lines = page.lines
+                    h_lines = [l for l in lines if l['top'] >= header_bottom - 2 and abs(l['top'] - l['bottom']) < 2]
+                    h_lines = sorted(h_lines, key=lambda l: l['top'])
+                    
+                    if h_lines:
+                        first_h = h_lines[0]['top']
+                        if abs(first_h - header_bottom) < 15:
+                            box_top_pdf = first_h + 2.0
+                            remaining_h = [l for l in h_lines if l['top'] > box_top_pdf + 20]
+                            if remaining_h:
+                                box_bottom_pdf = remaining_h[0]['top'] - 1.0
+                            else:
+                                box_bottom_pdf = box_top_pdf + 68.0
+                        else:
+                            box_top_pdf = header_bottom + 6.0
+                            box_bottom_pdf = h_lines[0]['top'] - 1.0
+                    else:
+                        box_top_pdf = header_bottom + 8.0
+                        box_bottom_pdf = box_top_pdf + 68.0
+                        
                     box_top_y = page_height - box_top_pdf
                     box_bottom_y = page_height - box_bottom_pdf
                     
-                    lines = page.lines
                     v_lines = [l for l in lines if l['top'] <= box_top_pdf + 10 and l['bottom'] >= box_bottom_pdf - 10 and abs(l['x0'] - l['x1']) < 2]
                     v_lines = sorted(v_lines, key=lambda l: l['x0'])
                     
@@ -112,7 +130,7 @@ def _detect_signature_boxes_from_pdf(source_pdf_bytes: bytes, page_idx: int = -1
                         return column_centers, box_top_y, box_bottom_y
                     
                     return [80.8, 188.5, 296.2, 403.9, 511.6], box_top_y, box_bottom_y
-                return [80.8, 188.5, 296.2, 403.9, 511.6], page_height - 264.4, page_height - 324.4
+                return [80.8, 188.5, 296.2, 403.9, 511.6], page_height - 272.0, page_height - 340.0
 
             # 3. PPAB (Permintaan Pemakaian Anggaran Belanja)
             if "PPAB" in upper_squished or "PEMAKAIANANGGARANBELANJA" in upper_squished:

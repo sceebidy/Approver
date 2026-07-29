@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, ClipboardList, FileText, Wallet, Loader2 } from "lucide-react";
+import { Clock, ClipboardList, FileText, Wallet, Loader2, ArrowRight } from "lucide-react";
 import PendingApprovalsList from "@/components/PendingApprovalsList";
 import DocumentDetailModal from "@/components/DocumentDetailModal";
 import Link from "next/link";
@@ -66,14 +66,21 @@ export default function DashboardPage() {
         </section>
 
         {/* Recent Documents */}
-        <section className="bg-white rounded-xl border border-[#E3E6EA] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] overflow-hidden">
+        <section className="bg-white rounded-xl border border-[#E3E6EA] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col">
           <div className="px-5 py-4 border-b border-[#E3E6EA] bg-[#F8F9FB] flex items-center justify-between">
             <div>
               <h3 className="text-[15px] font-bold text-[#111827]">Dokumen Terbaru Anda</h3>
-              <p className="text-[12.5px] text-[#6B7280] mt-0.5">Aktivitas terkini yang berkaitan dengan Anda</p>
+              <p className="text-[12.5px] text-[#6B7280] mt-0.5">3 aktivitas terkini yang berkaitan dengan Anda</p>
             </div>
+            <Link
+              href="/history"
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#1F3A5F] hover:text-[#162a45] bg-[#1F3A5F]/5 hover:bg-[#1F3A5F]/10 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <span>Lihat Semua</span>
+              <ArrowRight size={14} />
+            </Link>
           </div>
-          <div className="divide-y divide-[#E3E6EA]/70">
+          <div className="divide-y divide-[#E3E6EA]/70 flex-1">
             {recentLoading ? (
               <div className="p-8 text-center flex items-center justify-center gap-2 text-slate-500">
                 <Loader2 size={18} className="animate-spin text-[#1F3A5F]" />
@@ -87,7 +94,7 @@ export default function DashboardPage() {
                 <p className="text-[13.5px] font-medium text-[#4B5563]">Belum ada aktivitas dokumen</p>
               </div>
             ) : (
-              recentDocs.map((d: any) => (
+              recentDocs.slice(0, 3).map((d: any) => (
                 <div
                   key={`${d.type}-${d.id}`}
                   onClick={() => {
@@ -119,6 +126,17 @@ export default function DashboardPage() {
               ))
             )}
           </div>
+          {recentDocs.length > 0 && (
+            <div className="p-3 bg-[#F8F9FB] border-t border-[#E3E6EA] text-center">
+              <Link
+                href="/history"
+                className="text-[12.5px] font-semibold text-[#1F3A5F] hover:underline inline-flex items-center gap-1.5"
+              >
+                <span>Lihat Seluruh Riwayat Dokumen ({recentDocs.length})</span>
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
         </section>
       </div>
 
