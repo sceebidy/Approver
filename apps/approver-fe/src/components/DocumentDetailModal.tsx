@@ -419,7 +419,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                               <td className="px-4 py-2.5 text-[#6B7280]">{item.satuan || '-'}</td>
                               {docType !== 'mis' && (
                                 <td className="px-4 py-2.5 text-right font-mono text-[12px] whitespace-nowrap">
-                                  {item.currency !== 'IDR' ? `${item.currency} ` : 'Rp '}
+                                  {item.currency && item.currency !== 'IDR' ? `${item.currency} ` : 'Rp '}
                                   {Number(item.harga_satuan).toLocaleString('id-ID')}
                                 </td>
                               )}
