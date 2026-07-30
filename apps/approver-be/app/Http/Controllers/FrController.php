@@ -247,6 +247,25 @@ class FrController extends Controller
 
     private function getOrCreateUser($approverData)
     {
+        $authUser = auth()->user();
+
+        if ($authUser) {
+            $isSelf = false;
+            if (!empty($approverData['employee_id']) && $authUser->employee_id === $approverData['employee_id']) {
+                $isSelf = true;
+            } elseif (!empty($approverData['name']) && strtolower($authUser->name) === strtolower(trim($approverData['name']))) {
+                $isSelf = true;
+            }
+
+            if ($isSelf) {
+                if (empty($authUser->employee_id) && !empty($approverData['employee_id'])) {
+                    $authUser->employee_id = $approverData['employee_id'];
+                    $authUser->save();
+                }
+                return $authUser;
+            }
+        }
+
         if (!empty($approverData['employee_id'])) {
             $user = \App\Models\User::where('employee_id', $approverData['employee_id'])->first();
             if ($user) {
