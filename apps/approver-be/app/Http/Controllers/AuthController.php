@@ -61,6 +61,18 @@ class AuthController extends Controller
                 $user = User::where('email', $email)->first();
             }
 
+            // Tangani jika ada akun lain yang sudah menggunakan email ini (misal akun seeder / dummy)
+            if ($email && $user) {
+                $existingEmailUser = User::where('email', $email)->where('id', '!=', $user->id)->first();
+                if ($existingEmailUser) {
+                    // Gunakan akun dengan email yang cocok dan tautkan employee_id nya
+                    if (empty($existingEmailUser->employee_id)) {
+                        $existingEmailUser->employee_id = $employeeId;
+                    }
+                    $user = $existingEmailUser;
+                }
+            }
+
             $userData = [
                 'email' => $email,
                 'name' => $employee['namaLengkap'] ?? $portalUser['name'] ?? 'Unknown',
