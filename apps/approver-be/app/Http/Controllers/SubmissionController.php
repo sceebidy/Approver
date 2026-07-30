@@ -504,6 +504,119 @@ class SubmissionController extends Controller
     }
 
     /**
+     * Get ALL document submissions system-wide (Admin Only).
+     */
+    public function adminRequests(Request $request)
+    {
+        $user = $request->user();
+        if (!$user || !in_array(strtolower($user->role ?? ''), ['super_admin', 'admin'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: Hanya admin yang dapat mengakses data ini.'
+            ], 403);
+        }
+
+        $ppabList = Ppab::with(['approverLines', 'user'])
+            ->latest()
+            ->get()
+            ->map(fn($p) => [
+                'id'          => $p->id,
+                'type'        => 'PPAB',
+                'number'      => $p->nomor_ppab,
+                'description' => $p->deskripsi,
+                'created_at'  => $p->created_at,
+                'status'      => $p->approverLines->contains('status', 'rejected') ? 'rejected' : ($p->approverLines->count() > 0 && $p->approverLines->where('status', 'approved')->count() === $p->approverLines->count() ? 'approved' : 'pending'),
+                'requester'   => [
+                    'name'      => $p->user->name ?? 'User',
+                    'email'     => $p->user->email ?? '',
+                    'unit_nama' => $p->user->unit_nama ?? '',
+                ],
+            ]);
+
+        $poList = Po::with(['approverLines', 'user'])
+            ->latest()
+            ->get()
+            ->map(fn($p) => [
+                'id'          => $p->id,
+                'type'        => 'PO',
+                'number'      => $p->nomor_po,
+                'description' => 'Vendor: ' . ($p->vendor ?? ''),
+                'created_at'  => $p->created_at,
+                'status'      => $p->approverLines->contains('status', 'rejected') ? 'rejected' : ($p->approverLines->count() > 0 && $p->approverLines->where('status', 'approved')->count() === $p->approverLines->count() ? 'approved' : 'pending'),
+                'requester'   => [
+                    'name'      => $p->user->name ?? 'User',
+                    'email'     => $p->user->email ?? '',
+                    'unit_nama' => $p->user->unit_nama ?? '',
+                ],
+            ]);
+
+        $misList = Mis::with(['approverLines', 'user'])
+            ->latest()
+            ->get()
+            ->map(fn($m) => [
+                'id'          => $m->id,
+                'type'        => 'MIS',
+                'number'      => $m->nomor_mis,
+                'description' => 'Tanggal MIS: ' . ($m->tgl_mis ?? ''),
+                'created_at'  => $m->created_at,
+                'status'      => $m->approverLines->contains('status', 'rejected') ? 'rejected' : ($m->approverLines->count() > 0 && $m->approverLines->where('status', 'approved')->count() === $m->approverLines->count() ? 'approved' : 'pending'),
+                'requester'   => [
+                    'name'      => $m->user->name ?? 'User',
+                    'email'     => $m->user->email ?? '',
+                    'unit_nama' => $m->user->unit_nama ?? '',
+                ],
+            ]);
+
+        $frList = \App\Models\Fr::with(['approvers', 'requester'])
+            ->latest()
+            ->get()
+            ->map(fn($f) => [
+                'id'          => $f->id,
+                'type'        => 'FR',
+                'number'      => $f->number_fr,
+                'description' => $f->keterangan ?? 'Fund Request',
+                'created_at'  => $f->created_at,
+                'status'      => $f->status ?? 'pending',
+                'requester'   => [
+                    'name'      => $f->requester->name ?? 'User',
+                    'email'     => $f->requester->email ?? '',
+                    'unit_nama' => $f->requester->unit_nama ?? '',
+                ],
+            ]);
+
+        $fsList = \App\Models\FundSettlement::with(['approvers', 'requester'])
+            ->latest()
+            ->get()
+            ->map(fn($f) => [
+                'id'          => $f->id,
+                'type'        => 'FS',
+                'number'      => $f->number_fs,
+                'description' => 'Fund Settlement',
+                'created_at'  => $f->created_at,
+                'status'      => $f->status ?? 'pending',
+                'requester'   => [
+                    'name'      => $f->requester->name ?? 'User',
+                    'email'     => $f->requester->email ?? '',
+                    'unit_nama' => $f->requester->unit_nama ?? '',
+                ],
+            ]);
+
+        $allRequests = collect()
+            ->concat($ppabList)
+            ->concat($poList)
+            ->concat($misList)
+            ->concat($frList)
+            ->concat($fsList)
+            ->sortByDesc('created_at')
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $allRequests,
+        ]);
+    }
+
+    /**
      * Approve a document
      */
     public function approve(Request $request, $type, $lineId)

@@ -48,6 +48,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/submissions/{type}/{lineId}/approve', [\App\Http\Controllers\SubmissionController::class, 'approve']);
     Route::post('/submissions/{type}/{lineId}/reject', [\App\Http\Controllers\SubmissionController::class, 'reject']);
 
+    // Admin routes
+    Route::get('/admin/requests', [\App\Http\Controllers\SubmissionController::class, 'adminRequests']);
+
     // PPAB
     Route::get('/ppab',  [PpabController::class, 'index']);
     Route::post('/ppab', [PpabController::class, 'store']);
