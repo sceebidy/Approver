@@ -257,9 +257,9 @@ export function approverPayloadFromSelection(value: unknown): Record<string, str
 export function isApproverFieldKey(key: string): boolean {
   if (key === "approval_roles") return false;
   const k = key.toLowerCase();
+  if (k.includes("accept")) return false;
   return (
     k.includes("approv") ||
-    k.includes("accept") ||
     k.includes("prepared") ||
     k.includes("checked") ||
     k.includes("issued") ||
@@ -316,12 +316,13 @@ export function collectApproversFromData(data: Record<string, unknown>): Record<
   const roles = data.approval_roles;
   if (roles && typeof roles === "object" && !Array.isArray(roles)) {
     for (const [roleKey, val] of Object.entries(roles as Record<string, unknown>)) {
+      if (roleKey.toLowerCase().includes("accept")) continue;
       add(val, roleKey);
     }
   }
 
   for (const [key, val] of Object.entries(data)) {
-    if (key === "approval_roles") continue;
+    if (key === "approval_roles" || key.toLowerCase().includes("accept")) continue;
     if (isApproverFieldKey(key)) add(val, key);
   }
 

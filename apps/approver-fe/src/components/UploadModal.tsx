@@ -312,7 +312,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
 
     const approvers = collectApproversFromData(editableResult as Record<string, unknown>);
     if (approvers.length === 0) {
-      setStatus("Pilih minimal satu approver dari field seperti Accepted By / Approved By.");
+      setStatus("Pilih minimal satu approver dari field seperti Prepared By / Checked By / Approved By.");
       return;
     }
 

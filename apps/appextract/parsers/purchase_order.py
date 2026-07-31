@@ -8,7 +8,7 @@ def _extract_po_approval(layout_text: str, vendor_nama: str = "Pihak Supplier / 
     
     if len(roles) >= 4:
         return {
-            "accepted_by": roles[0] if roles[0] else vendor_nama,
+            "accepted_by": vendor_nama,
             "prepared_by": roles[1],
             "checked_by": roles[2],
             "approved_by": roles[3]
