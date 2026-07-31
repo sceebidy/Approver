@@ -733,7 +733,39 @@ function EditableValue({
   }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return <div className="text-sm text-slate-400 italic bg-[#F8F9FB] px-3 py-2 rounded-lg border border-dashed border-[#E3E6EA] w-max">(Tidak ada item)</div>;
+    if (value.length === 0) {
+      const isItems = fieldKey === "items";
+      return (
+        <div className="space-y-3 mt-1">
+          <div className="flex items-center gap-2 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200/80 px-3.5 py-2.5 rounded-xl shadow-sm">
+            <AlertCircle size={16} className="shrink-0 text-amber-600" />
+            <span>
+              {isItems 
+                ? "Tidak ada item terdeteksi dari PDF. Anda dapat menambahkan item secara manual di bawah."
+                : "(Tidak ada item)"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const defaultItem = {
+                no: 1,
+                deskripsi: "",
+                satuan: "UNIT",
+                qty: 1,
+                harga_satuan: 0,
+                amount: 0,
+              };
+              onChange([defaultItem]);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#1F3A5F] bg-[#1F3A5F]/10 hover:bg-[#1F3A5F]/20 border border-[#1F3A5F]/20 rounded-lg shadow-sm transition-all"
+          >
+            <Plus size={14} /> Tambah Item Manual
+          </button>
+        </div>
+      );
+    }
+
     if (value.every((item) => typeof item !== "object")) {
       return (
         <ul className="space-y-2 mt-1">
@@ -759,46 +791,82 @@ function EditableValue({
 
     const keys = Array.from(new Set(value.flatMap((row: any) => Object.keys(row || {}))));
     return (
-      <div className="overflow-hidden rounded-xl border border-[#E3E6EA] shadow-sm mt-1 bg-white ring-1 ring-slate-900/5">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-[#F8F9FB] text-slate-600 border-b border-[#E3E6EA]">
-              <tr>
-                {keys.map((key) => (
-                  <th key={key} className={`px-4 py-3 font-semibold whitespace-nowrap text-xs uppercase tracking-wider ${isMoneyField(key) ? 'text-right' : ''}`}>
-                    {key.replace(/_/g, ' ')}
+      <div className="space-y-2.5 mt-1">
+        <div className="overflow-hidden rounded-xl border border-[#E3E6EA] shadow-sm bg-white ring-1 ring-slate-900/5">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-[#F8F9FB] text-slate-600 border-b border-[#E3E6EA]">
+                <tr>
+                  {keys.map((key) => (
+                    <th key={key} className={`px-4 py-3 font-semibold whitespace-nowrap text-xs uppercase tracking-wider ${isMoneyField(key) ? 'text-right' : ''}`}>
+                      {key.replace(/_/g, ' ')}
+                    </th>
+                  ))}
+                  <th className="px-3 py-3 font-semibold whitespace-nowrap text-xs uppercase tracking-wider text-center w-12">
+                    Aksi
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E3E6EA] bg-white">
-              {value.map((row: any, rowIndex: number) => (
-                <tr key={rowIndex} className="hover:bg-[#F8F9FB]/50 transition-colors group">
-                  {keys.map((key) => {
-                    const isMoneyCol = isMoneyField(key);
-                    return (
-                      <td key={key} className="p-2 align-top min-w-[120px]">
-                        <div className="relative">
-                          {isMoneyCol && <span className="absolute left-2.5 top-2 text-[11px] text-slate-400 font-medium">Rp</span>}
-                          <input
-                            className={`w-full rounded-md border border-transparent px-2 py-1.5 text-sm text-slate-800 transition-all focus:border-[#1F3A5F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1F3A5F]/20 hover:border-slate-300 bg-transparent group-hover:bg-white focus:bg-white ${isMoneyCol ? 'pl-8 text-right font-mono' : ''}`}
-                            value={isMoneyCol ? formatMoney(row?.[key]) : (row?.[key] ?? "")}
-                            onChange={(e) => {
-                              const val = isMoneyCol ? parseMoney(e.target.value) : e.target.value;
-                              const next = value.map((current: any, index: number) =>
-                                index === rowIndex ? { ...current, [key]: val } : current,
-                              );
-                              onChange(next);
-                            }}
-                          />
-                        </div>
-                      </td>
-                    );
-                  })}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#E3E6EA] bg-white">
+                {value.map((row: any, rowIndex: number) => (
+                  <tr key={rowIndex} className="hover:bg-[#F8F9FB]/50 transition-colors group">
+                    {keys.map((key) => {
+                      const isMoneyCol = isMoneyField(key);
+                      return (
+                        <td key={key} className="p-2 align-top min-w-[120px]">
+                          <div className="relative">
+                            {isMoneyCol && <span className="absolute left-2.5 top-2 text-[11px] text-slate-400 font-medium">Rp</span>}
+                            <input
+                              className={`w-full rounded-md border border-transparent px-2 py-1.5 text-sm text-slate-800 transition-all focus:border-[#1F3A5F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1F3A5F]/20 hover:border-slate-300 bg-transparent group-hover:bg-white focus:bg-white ${isMoneyCol ? 'pl-8 text-right font-mono' : ''}`}
+                              value={isMoneyCol ? formatMoney(row?.[key]) : (row?.[key] ?? "")}
+                              onChange={(e) => {
+                                const val = isMoneyCol ? parseMoney(e.target.value) : e.target.value;
+                                const next = value.map((current: any, index: number) =>
+                                  index === rowIndex ? { ...current, [key]: val } : current,
+                                );
+                                onChange(next);
+                              }}
+                            />
+                          </div>
+                        </td>
+                      );
+                    })}
+                    <td className="p-2 align-middle text-center w-12">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = value.filter((_: any, idx: number) => idx !== rowIndex);
+                          onChange(next);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors inline-flex items-center justify-center"
+                        title="Hapus baris item"
+                      >
+                        <X size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              const newRow: Record<string, any> = {};
+              keys.forEach((k) => {
+                if (k === "no") newRow[k] = value.length + 1;
+                else if (k === "qty") newRow[k] = 1;
+                else if (k === "harga_satuan" || k === "amount" || k === "jumlah" || k === "subtotal" || k === "total") newRow[k] = 0;
+                else newRow[k] = "";
+              });
+              onChange([...value, newRow]);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1F3A5F] bg-[#1F3A5F]/10 hover:bg-[#1F3A5F]/20 border border-[#1F3A5F]/20 rounded-lg shadow-sm transition-all"
+          >
+            <Plus size={14} /> Tambah Baris Item
+          </button>
         </div>
       </div>
     );
