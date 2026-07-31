@@ -4,11 +4,29 @@ import { useState } from "react";
 import DocumentListPage from "@/components/DocumentListPage";
 import DocumentDetailModal from "@/components/DocumentDetailModal";
 import { useDocumentList } from "@/lib/useDocumentList";
+import { getXsrfToken } from "@/lib/csrf";
 
 export default function FsListPage() {
   const { rows, loading, error, refresh } = useDocumentList("fs");
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleDelete = async (row: any) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+    const res = await fetch(`${apiUrl}/fs/${row.id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'X-XSRF-TOKEN': getXsrfToken()
+      }
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || 'Gagal membatalkan pengajuan FS.');
+    }
+    refresh();
+  };
 
   return (
     <>
@@ -28,6 +46,7 @@ export default function FsListPage() {
         rows={rows}
         loading={loading}
         error={error}
+        onDelete={handleDelete}
         onRowClick={(row) => {
           setSelectedDocId(Number(row.id));
           setIsModalOpen(true);

@@ -626,7 +626,20 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
           ) : null}
         </div>
 
-        <div className="border-t border-[#E3E6EA] px-5 py-3 bg-[#F8F9FB] sm:rounded-b-lg flex items-center justify-end shrink-0">
+        <div className="border-t border-[#E3E6EA] px-5 py-3 bg-[#F8F9FB] sm:rounded-b-lg flex items-center justify-between shrink-0">
+          <div>
+            {data && (
+              <button
+                onClick={() => {
+                  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+                  window.open(`${apiUrl}/${docType.toLowerCase()}/${data.id}/signed-pdf`, '_blank');
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-bold text-white bg-[#1F3A5F] hover:bg-[#152843] rounded-md shadow-sm transition-all duration-200"
+              >
+                <FileText size={15} /> Lihat PDF
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-white border border-[#D1D5DB] text-[13px] font-medium text-slate-700 rounded-md hover:bg-slate-50 transition-colors"

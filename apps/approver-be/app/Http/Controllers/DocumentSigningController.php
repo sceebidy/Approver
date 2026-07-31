@@ -109,7 +109,7 @@ class DocumentSigningController extends Controller
 
         if ($documentType === 'fs' || $documentType === 'fund_settlement') {
             $documentType = 'fs';
-            $document = FundSettlement::with('itemLines', 'requester', 'approvers.approver')->find($id);
+            $document = FundSettlement::with(['itemLines', 'fr.itemLines.itemLineTaxes', 'requester', 'approvers.approver'])->find($id);
         } elseif ($documentType === 'ppab') {
             $document = Ppab::with('items', 'user', 'approverLines.approver')->find($id);
         } elseif ($documentType === 'po') {
@@ -117,7 +117,7 @@ class DocumentSigningController extends Controller
         } elseif ($documentType === 'mis') {
             $document = Mis::with('itemLines', 'user', 'approverLines.approver')->find($id);
         } elseif ($documentType === 'fr') {
-            $document = Fr::with('itemLines', 'requester', 'approvers.approver')->find($id);
+            $document = Fr::with(['itemLines.itemLineTaxes', 'requester', 'approvers.approver'])->find($id);
         }
 
         if (!$document) {
@@ -138,9 +138,9 @@ class DocumentSigningController extends Controller
             }
         }
 
-        // Cek apakah PDF sudah di-generate sebelumnya
+        // Cek apakah PDF sudah di-generate sebelumnya (regenerate jika dimintai atau template berubah)
         $filePath = null;
-        if (!empty($document->signed_pdf_path)) {
+        if (!empty($document->signed_pdf_path) && !$request->has('regenerate') && $request->query('refresh') !== 'true') {
             $fullPath = storage_path('app/' . $document->signed_pdf_path);
             if (file_exists($fullPath)) {
                 $filePath = $fullPath;

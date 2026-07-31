@@ -218,7 +218,7 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
                     </th>
                   ))}
                   <th className="px-5 py-3.5">Status</th>
-                  {onDelete && <th className="px-5 py-3.5 text-right">Aksi</th>}
+                  <th className="px-5 py-3.5 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E3E6EA]/70 bg-white">
@@ -253,40 +253,33 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
                     <td className="px-5 py-3.5">
                       <StatusBadge status={r.status ?? 'pending'} />
                     </td>
-                    {onDelete && (
-                      <td className="px-5 py-3.5 text-right">
-                        {r.status === 'approved' ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
-                              window.open(`${apiUrl}/${currentDocType}/${r.id}/signed-pdf`, '_blank');
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-[#1F3A5F] bg-[#1F3A5F]/10 hover:bg-[#1F3A5F]/20 border border-[#1F3A5F]/20 rounded-md shadow-sm transition-all duration-200"
-                          >
-                            <FileText size={14} /> Lihat PDF
-                          </button>
-                        ) : r.can_cancel !== false ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteError(null);
-                              setDeletingRow(r);
-                            }}
-                            className="px-3 py-1.5 text-[12px] font-medium text-red-600 bg-white hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-                          >
-                            Batalkan
-                          </button>
-                        ) : (
-                          <span
-                            title="Pengajuan tidak dapat dibatalkan karena sudah ada approval yang disetujui"
-                            className="inline-block px-3 py-1.5 text-[12px] font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-md cursor-not-allowed select-none"
-                          >
-                            Batalkan
-                          </span>
-                        )}
-                      </td>
-                    )}
+                    <td className="px-5 py-3.5 text-right">
+                      {r.status === 'approved' ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+                            window.open(`${apiUrl}/${currentDocType}/${r.id}/signed-pdf`, '_blank');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-[#1F3A5F] bg-[#1F3A5F]/10 hover:bg-[#1F3A5F]/20 border border-[#1F3A5F]/20 rounded-md shadow-sm transition-all duration-200"
+                        >
+                          <FileText size={14} /> Lihat PDF
+                        </button>
+                      ) : onDelete && r.can_cancel !== false ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteError(null);
+                            setDeletingRow(r);
+                          }}
+                          className="px-3 py-1.5 text-[12px] font-medium text-red-600 bg-white hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                        >
+                          Batalkan
+                        </button>
+                      ) : (
+                        <span className="text-[12.5px] text-gray-400 font-medium">-</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

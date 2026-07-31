@@ -92,7 +92,7 @@
             text-transform: uppercase;
         }
 
-        /* Bingkai Metadata (Table Border-Collapse untuk Mencegah Overflow Garis Kanan) */
+        /* Bingkai Metadata */
         .info-bingkai-table {
             width: 100%;
             border-collapse: collapse;
@@ -200,7 +200,7 @@
         'docTitle' => 'FUND SETTLEMENT FORM'
     ])
 
-    <!-- 2. Bingkai Metadata (Menggunakan Table Border-Collapse Presisi Rata Kanan) -->
+    <!-- 2. Bingkai Metadata -->
     <table class="info-bingkai-table">
         <tbody>
             <tr>
@@ -209,7 +209,7 @@
                         <tr>
                             <td style="width: 100px; font-weight: bold;">DATE</td>
                             <td style="width: 15px; text-align: center;">:</td>
-                            <td>{{ $doc->settlement_date ? \Carbon\Carbon::parse($doc->settlement_date)->format('d/m/Y H:i:s') : ($doc->created_at ? \Carbon\Carbon::parse($doc->created_at)->format('d/m/Y H:i:s') : now()->format('d/m/Y H:i:s')) }}</td>
+                            <td>{{ $doc->settlement_date ? \Carbon\Carbon::parse($doc->settlement_date)->format('d/m/Y H:i:s') : ($doc->requester_date_time ? \Carbon\Carbon::parse($doc->requester_date_time)->format('d/m/Y H:i:s') : ($doc->created_at ? \Carbon\Carbon::parse($doc->created_at)->format('d/m/Y H:i:s') : now()->format('d/m/Y H:i:s'))) }}</td>
                         </tr>
                         <tr>
                             <td style="font-weight: bold;">REQUESTED BY</td>
@@ -242,9 +242,17 @@
     </table>
 
     @php
-        // Hitung total advance dari FR referensi jika ada
+        // Ambil item realisasi pengeluaran dari relasi itemLines atau items
+        $realisasiItems = [];
+        if (isset($doc->itemLines) && count($doc->itemLines) > 0) {
+            $realisasiItems = $doc->itemLines;
+        } elseif (isset($doc->items) && count($doc->items) > 0) {
+            $realisasiItems = $doc->items;
+        }
+
+        // Total Advance (FR Amount / Balance awal)
         $frTotal = 0;
-        if (isset($doc->fr) && isset($doc->fr->itemLines)) {
+        if (isset($doc->fr) && isset($doc->fr->itemLines) && count($doc->fr->itemLines) > 0) {
             foreach ($doc->fr->itemLines as $frLine) {
                 $frTotal += floatval($frLine->sub_total ?? 0);
                 if (isset($frLine->itemLineTaxes)) {
@@ -254,8 +262,8 @@
                 }
             }
         }
-        if ($frTotal == 0 && isset($doc->nominal_advance)) {
-            $frTotal = floatval($doc->nominal_advance);
+        if ($frTotal == 0 && isset($doc->balance)) {
+            $frTotal = floatval($doc->balance);
         }
 
         $no = 1;
@@ -281,12 +289,12 @@
                 <td class="text-right">Rp {{ number_format($frTotal, 0, '.', ',') }}</td>
             </tr>
 
-            <!-- Item Lines Realisasi -->
-            @if(isset($doc->items) && count($doc->items) > 0)
-                @foreach($doc->items as $item)
+            <!-- Item Lines Realisasi Pengeluaran -->
+            @if(count($realisasiItems) > 0)
+                @foreach($realisasiItems as $item)
                     @php
                         $no++;
-                        $realisasi = floatval($item->nominal_realisasi ?? $item->sub_total ?? 0);
+                        $realisasi = floatval($item->total ?? $item->nominal_realisasi ?? $item->sub_total ?? 0);
                         $totalExpenses += $realisasi;
                     @endphp
                     <tr>
@@ -313,8 +321,13 @@
             </tr>
 
             @php
-                $balanceDueEmployee = max(0, $totalExpenses - $frTotal);
-                $balanceDueCompany = max(0, $frTotal - $totalExpenses);
+                $balanceDueEmployee = isset($doc->balance_due_to_employee) && floatval($doc->balance_due_to_employee) > 0
+                    ? floatval($doc->balance_due_to_employee)
+                    : max(0, $totalExpenses - $frTotal);
+
+                $balanceDueCompany = isset($doc->balance_due_to_company) && floatval($doc->balance_due_to_company) > 0
+                    ? floatval($doc->balance_due_to_company)
+                    : max(0, $frTotal - $totalExpenses);
             @endphp
 
             <!-- Balance Due to Employee Row -->
