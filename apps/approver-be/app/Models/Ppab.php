@@ -37,4 +37,9 @@ class Ppab extends Model
     {
         return $this->hasMany(PpabSubtotal::class, 'ppab_id');
     }
+
+    public function verfAnggaran()
+    {
+        return $this->hasOne(PpabVerfAnggaran::class, 'ppab_id');
+    }
 }

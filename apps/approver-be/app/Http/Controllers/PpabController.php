@@ -145,7 +145,7 @@ class PpabController extends Controller
 
     public function show($id)
     {
-        $ppab = Ppab::with(['user:id,name', 'items.lineSpecs', 'subtotals', 'approverLines.approver:id,name'])->findOrFail($id);
+        $ppab = Ppab::with(['user:id,name', 'items.lineSpecs', 'subtotals', 'approverLines.approver:id,name', 'verfAnggaran'])->findOrFail($id);
         
         $user = auth()->user();
         $isOwner = $ppab->user_id === $user->id;
@@ -162,6 +162,47 @@ class PpabController extends Controller
         return response()->json([
             'success' => true,
             'data' => $ppab
+        ]);
+    }
+
+    public function storeVerfAnggaran(Request $request, $id)
+    {
+        $ppab = Ppab::with('approverLines')->findOrFail($id);
+        $user = auth()->user();
+
+        $isOwner = $ppab->user_id === $user->id;
+        $isApprover = $ppab->approverLines->contains('approver_id', $user->id);
+
+        if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
+        }
+
+        $validated = $request->validate([
+            'sumber_rek'    => 'required|string|max:255',
+            'beban_rek'     => 'required|string|max:255',
+            'rkap_1_tahun'  => 'required|numeric',
+            'realisasi'     => 'required|numeric',
+            'permintaan'    => 'required|numeric',
+            'sisa_anggaran' => 'required|numeric',
+        ]);
+
+        $verf = \App\Models\PpabVerfAnggaran::updateOrCreate(
+            ['ppab_id' => $ppab->id],
+            [
+                'no_ppab'       => $ppab->nomor_ppab,
+                'sumber_rek'    => $validated['sumber_rek'],
+                'beban_rek'     => $validated['beban_rek'],
+                'rkap_1_tahun'  => $validated['rkap_1_tahun'],
+                'realisasi'     => $validated['realisasi'],
+                'permintaan'    => $validated['permintaan'],
+                'sisa_anggaran' => $validated['sisa_anggaran'],
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data Verifikasi Anggaran berhasil disimpan.',
+            'data'    => $verf,
         ]);
     }
 

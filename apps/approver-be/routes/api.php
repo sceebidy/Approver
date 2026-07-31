@@ -59,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/ppab',  [PpabController::class, 'index']);
     Route::post('/ppab', [PpabController::class, 'store']);
     Route::get('/ppab/{id}', [PpabController::class, 'show']);
+    Route::post('/ppab/{id}/verf-anggaran', [PpabController::class, 'storeVerfAnggaran']);
     Route::delete('/ppab/{id}', [PpabController::class, 'destroy']);
 
     // PO

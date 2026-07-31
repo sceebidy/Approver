@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle, Calculator, FileSpreadsheet, Edit3 } from "lucide-react";
 import { getXsrfToken } from "@/lib/csrf";
+import VerfAnggaranModal, { VerfAnggaranData } from "./VerfAnggaranModal";
 
 interface ApproverLine {
   id: number;
@@ -32,6 +33,8 @@ interface DocDetail {
   deskripsi?: string;
   items?: any[];
   subtotals?: any[];
+  verf_anggaran?: VerfAnggaranData | null;
+  verfAnggaran?: VerfAnggaranData | null;
   // PO specific
   nomor_po?: string;
   nomor_ppab_po?: string;
@@ -66,6 +69,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
   const [data, setData] = useState<DocDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isVerfModalOpen, setIsVerfModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     action: 'approve' | 'reject';
@@ -325,6 +329,90 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                 </div>
               </div>
 
+              {/* Verifikasi Anggaran Card (PPAB Specific) */}
+              {docType === 'ppab' && (
+                <div className="bg-white border border-[#E3E6EA] rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-[#F8F9FB] px-4 py-2.5 border-b border-[#E3E6EA] flex items-center justify-between">
+                    <h4 className="text-[13px] font-semibold text-[#374151] flex items-center gap-2">
+                      <FileSpreadsheet size={16} className="text-[#1F3A5F]" />
+                      Stamp Verifikasi Anggaran
+                    </h4>
+                    {(userPendingLines.length > 0 || actualApprovers.some((l: any) => l.approver_id === data?.current_user_id)) && (
+                      <button
+                        onClick={() => setIsVerfModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-semibold rounded-md transition-all shadow-xs"
+                      >
+                        <Edit3 size={13} />
+                        {(data?.verf_anggaran || data?.verfAnggaran) ? "Edit Verifikasi Anggaran" : "Isi Verifikasi Anggaran"}
+                      </button>
+                    )}
+                  </div>
+
+                  {(data?.verf_anggaran || data?.verfAnggaran) ? (
+                    (() => {
+                      const verf = data.verf_anggaran || data.verfAnggaran!;
+                      return (
+                        <div className="p-4 space-y-3 text-[13px]">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <div>
+                              <span className="text-[#6B7280] text-xs block mb-1">Sumber Rekening</span>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold uppercase tracking-wider ${
+                                String(verf.sumber_rek).toLowerCase() === 'investasi' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                {verf.sumber_rek}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[#6B7280] text-xs block mb-1">Beban Rekening</span>
+                              <span className="font-semibold text-slate-900">{verf.beban_rek || '-'}</span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                              <span className="text-[11px] text-slate-500 block uppercase font-medium">RKAP 1 Tahun</span>
+                              <span className="text-[14px] font-bold font-mono text-slate-900">
+                                Rp {Number(verf.rkap_1_tahun || 0).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                              <span className="text-[11px] text-slate-500 block uppercase font-medium">Realisasi</span>
+                              <span className="text-[14px] font-bold font-mono text-slate-900">
+                                Rp {Number(verf.realisasi || 0).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                              <span className="text-[11px] text-slate-500 block uppercase font-medium">Permintaan</span>
+                              <span className="text-[14px] font-bold font-mono text-blue-700">
+                                Rp {Number(verf.permintaan || 0).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                            <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                              <span className="text-[11px] text-slate-500 block uppercase font-medium">Sisa Anggaran</span>
+                              <span className="text-[14px] font-bold font-mono text-emerald-700">
+                                Rp {Number(verf.sisa_anggaran || 0).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="p-4 text-center bg-slate-50/50">
+                      <p className="text-xs text-slate-500 mb-2">Belum ada data Verifikasi Anggaran yang diisi untuk pengajuan PPAB ini.</p>
+                      {(userPendingLines.length > 0 || actualApprovers.some((l: any) => l.approver_id === data?.current_user_id)) && (
+                        <button
+                          onClick={() => setIsVerfModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md transition-all shadow-xs"
+                        >
+                          <Edit3 size={14} /> Isi Verifikasi Anggaran Sekarang
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Items Table */}
               <div className="bg-white border border-[#E3E6EA] rounded-lg overflow-hidden shadow-sm">
                 <div className="bg-[#F8F9FB] px-4 py-2.5 border-b border-[#E3E6EA]">
@@ -579,8 +667,18 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                               {/* Kanan: tombol aksi (jika user pending) atau badge status */}
                               <div className="flex items-center gap-2 shrink-0 sm:flex-col sm:items-end sm:gap-1">
                                 {isUserPending ? (
-                                  /* Ganti badge Pending dengan 2 tombol aksi */
-                                  <div className="flex items-center gap-1.5">
+                                  /* Ganti badge Pending dengan 3 tombol aksi jika PPAB */
+                                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                    {docType === 'ppab' && (
+                                      <button
+                                        onClick={() => setIsVerfModalOpen(true)}
+                                        className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 text-white text-[11px] font-semibold rounded-md hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                                        title="Isi data Verifikasi Anggaran"
+                                      >
+                                        <FileSpreadsheet size={12} strokeWidth={2.5} />
+                                        {(data?.verf_anggaran || data?.verfAnggaran) ? "Edit Verf. Anggaran" : "Isi Verf. Anggaran"}
+                                      </button>
+                                    )}
                                     <button
                                       onClick={() => promptAction('approve', line.id)}
                                       className="flex items-center gap-1 px-2.5 py-1 bg-emerald-500 text-white text-[11px] font-semibold rounded-md hover:bg-emerald-600 active:scale-95 transition-all shadow-sm"
@@ -707,6 +805,20 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
             )}
           </div>
         </div>
+      )}
+
+      {/* Modal Form Verifikasi Anggaran (PPAB) */}
+      {docType === 'ppab' && data && (
+        <VerfAnggaranModal
+          isOpen={isVerfModalOpen}
+          onClose={() => setIsVerfModalOpen(false)}
+          ppabId={data.id}
+          existingData={data.verf_anggaran || data.verfAnggaran}
+          onSuccess={(updatedVerf) => {
+            setData((prev) => (prev ? { ...prev, verf_anggaran: updatedVerf, verfAnggaran: updatedVerf } : null));
+            fetchDetail();
+          }}
+        />
       )}
     </div>
   );
