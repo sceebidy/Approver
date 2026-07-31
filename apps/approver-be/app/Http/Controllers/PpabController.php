@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ppab;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -148,16 +149,21 @@ class PpabController extends Controller
         $ppab = Ppab::with(['user:id,name', 'items.lineSpecs', 'subtotals', 'approverLines.approver:id,name', 'verfAnggaran'])->findOrFail($id);
         
         $user = auth()->user();
-        $isOwner = $ppab->user_id === $user->id;
-        $isApprover = $ppab->approverLines->contains('approver_id', $user->id);
+        $userIds = [$user->id];
+        if (!empty($user->employee_id)) {
+            $userIds = array_unique(array_merge($userIds, User::where('employee_id', $user->employee_id)->pluck('id')->toArray()));
+        }
+        $isOwner = in_array($ppab->user_id, $userIds);
+        $isApprover = $ppab->approverLines->contains(fn($l) => in_array($l->approver_id, $userIds));
         
-        if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
+        if (!$isOwner && !$isApprover && !in_array(strtolower($user->role ?? ''), ['super_admin', 'admin'])) {
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
         }
 
         $ppab->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $ppab->can_cancel = !$ppab->approverLines->contains('status', 'approved');
         $ppab->current_user_id = $user->id;
+        $ppab->current_user_ids = $userIds;
 
         return response()->json([
             'success' => true,
@@ -198,6 +204,14 @@ class PpabController extends Controller
                 'sisa_anggaran' => $validated['sisa_anggaran'],
             ]
         );
+
+        // Regenerate signed PDF agar stamp merah pada file PDF ter-update secara real-time
+        try {
+            $signingService = app(\App\Services\DocumentSigningService::class);
+            $signingService->generateSignedPdf('ppab', $ppab->fresh());
+        } catch (\Throwable $e) {
+            Log::error('[PpabController] Gagal update PDF setelah storeVerfAnggaran: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,

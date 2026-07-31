@@ -196,15 +196,27 @@ class SubmissionController extends Controller
         }
     }
 
+    protected function getUserIds($user): array
+    {
+        if (!$user) return [];
+        $ids = [$user->id];
+        if (!empty($user->employee_id)) {
+            $sameEmployeeUserIds = User::where('employee_id', $user->employee_id)->pluck('id')->toArray();
+            $ids = array_unique(array_merge($ids, $sameEmployeeUserIds));
+        }
+        return $ids;
+    }
+
     /**
      * Get pending approvals for the current user.
      */
     public function pendingApprovals(Request $request)
     {
-        $userId = $request->user()->id;
+        $user = $request->user();
+        $userIds = $this->getUserIds($user);
 
         $ppabPending = \App\Models\PpabApproverLine::with('ppab')
-            ->where('approver_id', $userId)
+            ->whereIn('approver_id', $userIds)
             ->where('status', 'pending')
             ->get()->map(function ($item) {
                 return [
@@ -219,7 +231,7 @@ class SubmissionController extends Controller
             });
 
         $poPending = \App\Models\PoApproverLine::with('po')
-            ->where('approver_id', $userId)
+            ->whereIn('approver_id', $userIds)
             ->where('status', 'pending')
             ->get()->map(function ($item) {
                 return [
@@ -234,7 +246,7 @@ class SubmissionController extends Controller
             });
 
         $misPending = \App\Models\MisApproverLine::with('mis')
-            ->where('approver_id', $userId)
+            ->whereIn('approver_id', $userIds)
             ->where('status', 'pending')
             ->get()->map(function ($item) {
                 return [
@@ -249,7 +261,7 @@ class SubmissionController extends Controller
             });
 
         $frPending = \App\Models\FrApprover::with('fr.kategoriFr', 'fr.requester')
-            ->where('approver_id', $userId)
+            ->whereIn('approver_id', $userIds)
             ->where('status', 'pending')
             ->get()->map(function ($item) {
                 return [
@@ -264,7 +276,7 @@ class SubmissionController extends Controller
             });
 
         $fsPending = \App\Models\FsApprover::with('fundSettlement.requester', 'fundSettlement.fr')
-            ->where('approver_id', $userId)
+            ->whereIn('approver_id', $userIds)
             ->where('status', 'pending')
             ->get()->map(function ($item) {
                 return [
@@ -635,7 +647,8 @@ class SubmissionController extends Controller
 
     private function updateApprovalStatus(Request $request, $type, $lineId, $status)
     {
-        $userId = $request->user()->id;
+        $user = $request->user();
+        $userIds = $this->getUserIds($user);
         $type = strtolower($type);
         if ($type === 'fund_settlement') {
             $type = 'fs';
@@ -645,27 +658,27 @@ class SubmissionController extends Controller
         $document = null;
 
         if ($type === 'ppab') {
-            $model = \App\Models\PpabApproverLine::where('id', $lineId)->where('approver_id', $userId)->first();
+            $model = \App\Models\PpabApproverLine::where('id', $lineId)->whereIn('approver_id', $userIds)->first();
             if ($model) {
                 $document = \App\Models\Ppab::find($model->ppab_id);
             }
         } elseif ($type === 'po') {
-            $model = \App\Models\PoApproverLine::where('id', $lineId)->where('approver_id', $userId)->first();
+            $model = \App\Models\PoApproverLine::where('id', $lineId)->whereIn('approver_id', $userIds)->first();
             if ($model) {
                 $document = \App\Models\Po::find($model->po_id);
             }
         } elseif ($type === 'mis') {
-            $model = \App\Models\MisApproverLine::where('id', $lineId)->where('approver_id', $userId)->first();
+            $model = \App\Models\MisApproverLine::where('id', $lineId)->whereIn('approver_id', $userIds)->first();
             if ($model) {
                 $document = \App\Models\Mis::find($model->mis_id);
             }
         } elseif ($type === 'fs') {
-            $model = \App\Models\FsApprover::where('id', $lineId)->where('approver_id', $userId)->first();
+            $model = \App\Models\FsApprover::where('id', $lineId)->whereIn('approver_id', $userIds)->first();
             if ($model) {
                 $document = \App\Models\FundSettlement::find($model->fs_id);
             }
         } elseif ($type === 'fr') {
-            $model = \App\Models\FrApprover::where('id', $lineId)->where('approver_id', $userId)->first();
+            $model = \App\Models\FrApprover::where('id', $lineId)->whereIn('approver_id', $userIds)->first();
             if ($model) {
                 $document = \App\Models\Fr::find($model->fr_id);
             }
@@ -721,11 +734,8 @@ class SubmissionController extends Controller
             }
 
             if ($status === 'approved') {
-                if ($totalLines > 0 && $totalLines === $approvedLines && empty($document->signed_pdf_path)) {
-                    // Semua approver sudah menyetujui & PDF belum pernah di-generate
-                    // Set flag — generateSignedPdf() dipanggil di LUAR transaction (heavy I/O)
-                    $shouldGeneratePdf = true;
-                }
+                // Selalu perbarui & stamp ulang PDF setiap kali ada approval baru agar tanda tangan & stamp selalu up-to-date
+                $shouldGeneratePdf = true;
             }
         });
 
@@ -758,17 +768,17 @@ class SubmissionController extends Controller
         $authUser = auth()->user();
 
         // 1. Cek apakah approver yang dipilih adalah user yang sedang login
-        // (Berdasarkan employee_id atau kecocokan nama, berguna jika user login pakai local/seeder account)
         if ($authUser) {
             $isSelf = false;
             if (!empty($approverData['employee_id']) && $authUser->employee_id === $approverData['employee_id']) {
                 $isSelf = true;
-            } elseif (!empty($approverData['name']) && strtolower($authUser->name) === strtolower(trim($approverData['name']))) {
+            } elseif (!empty($approverData['email']) && strtolower($authUser->email) === strtolower(trim($approverData['email']))) {
+                $isSelf = true;
+            } elseif (!empty($approverData['name']) && strtolower(trim($authUser->name)) === strtolower(trim($approverData['name']))) {
                 $isSelf = true;
             }
 
             if ($isSelf) {
-                // Update employee_id user yang sedang login jika sebelumnya kosong
                 if (empty($authUser->employee_id) && !empty($approverData['employee_id'])) {
                     $authUser->employee_id = $approverData['employee_id'];
                     $authUser->save();
@@ -779,14 +789,38 @@ class SubmissionController extends Controller
 
         // 2. Cari berdasarkan employee_id dari SSO
         if (!empty($approverData['employee_id'])) {
-            $user = User::where('employee_id', $approverData['employee_id'])->first();
+            $user = User::where('employee_id', $approverData['employee_id'])->orderBy('id', 'asc')->first();
             if ($user) {
                 return $user;
             }
         }
 
-        // ApproverData from SSO might contain email, name, employee_id, role
-        $email = $approverData['email'] ?? ($approverData['employee_id'] . '@inl.co.id');
+        // 3. Cari berdasarkan email
+        if (!empty($approverData['email'])) {
+            $user = User::where('email', $approverData['email'])->orderBy('id', 'asc')->first();
+            if ($user) {
+                if (empty($user->employee_id) && !empty($approverData['employee_id'])) {
+                    $user->employee_id = $approverData['employee_id'];
+                    $user->save();
+                }
+                return $user;
+            }
+        }
+
+        // 4. Cari berdasarkan nama (case-insensitive) jika cocok dengan user di database
+        if (!empty($approverData['name'])) {
+            $user = User::whereRaw('LOWER(name) = ?', [strtolower(trim($approverData['name']))])->orderBy('id', 'asc')->first();
+            if ($user) {
+                if (empty($user->employee_id) && !empty($approverData['employee_id'])) {
+                    $user->employee_id = $approverData['employee_id'];
+                    $user->save();
+                }
+                return $user;
+            }
+        }
+
+        // 5. ApproverData from SSO might contain email, name, employee_id, role
+        $email = $approverData['email'] ?? (!empty($approverData['employee_id']) ? $approverData['employee_id'] . '@inl.co.id' : 'user_' . time() . '@inl.co.id');
         
         return User::firstOrCreate(
             ['email' => $email],

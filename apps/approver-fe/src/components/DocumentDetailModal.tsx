@@ -55,6 +55,7 @@ interface DocDetail {
   balance_due_to_company?: number;
   fr_id?: number;
   current_user_id?: number;
+  current_user_ids?: number[];
 }
 
 interface DocumentDetailModalProps {
@@ -644,7 +645,10 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                         const isRejected = line.status === 'rejected';
                         const isPending = line.status === 'pending';
 
-                        const isUserPending = isPending && line.approver_id === data?.current_user_id;
+                        const isUserPending = isPending && (
+                          line.approver_id === data?.current_user_id ||
+                          (Array.isArray(data?.current_user_ids) && data.current_user_ids.includes(line.approver_id))
+                        );
 
                         return (
                           <div 
