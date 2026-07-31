@@ -471,14 +471,14 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                               return (
                                 <>
                                   <tr>
-                                    <td className="py-1.5 text-[#6B7280]">PPN 11% (Estimasi)</td>
+                                    <td className="py-1.5 text-[#6B7280]">PPN 11%</td>
                                     <td className="py-1.5 text-right font-medium text-[#111827] font-mono text-[12.5px]">
                                       <span className="text-[11px] text-[#9CA3AF] font-normal mr-1">{cur}</span>
                                       {Number(ppn).toLocaleString('id-ID')}
                                     </td>
                                   </tr>
                                   <tr>
-                                    <td className="py-2 text-[#374151] font-bold">Grand Total (Estimasi)</td>
+                                    <td className="py-2 text-[#374151] font-bold">Grand Total</td>
                                     <td className="py-2 text-right font-bold text-[#111827] font-mono text-[13.5px]">
                                       <span className="text-[11px] text-[#9CA3AF] font-normal mr-1">{cur}</span>
                                       {Number(grandTotal).toLocaleString('id-ID')}
