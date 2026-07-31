@@ -7,8 +7,9 @@ from fastapi.responses import Response
 # pyrefly: ignore [missing-import]
 import pdfplumber
 
+from typing import Optional
 from parsers.detector import parse_document
-from parsers.stamper import stamp_pdf, ApproverStamp
+from parsers.stamper import stamp_pdf, ApproverStamp, VerfAnggaranStamp
 
 app = FastAPI(title="PDF to JSON Microservice")
 
@@ -40,54 +41,57 @@ async def convert(file: UploadFile = File(...)):
 @app.post("/stamp-pdf")
 async def stamp_pdf_endpoint(
     file: UploadFile = File(..., description="PDF asli yang akan di-stamp"),
-    approvers_json: str = Form(..., description="JSON array data approver"),
+    approvers_json: str = Form("[]", description="JSON array data approver"),
+    verf_anggaran_json: Optional[str] = Form(None, description="JSON object data verifikasi anggaran"),
 ):
     """
-    Stamp tanda tangan digital ke PDF asli.
-    
-    Menerima:
-    - file: PDF asli (multipart file upload)
-    - approvers_json: JSON string berisi array of approver data, contoh:
-      [
-        {
-          "role": "Manajer/Kabag IT",
-          "name": "John Doe",
-          "jabatan": "Manager IT",
-          "signed_at": "28/07/2026 10:30",
-          "verify_url": "https://example.com/verify/ppab/1/1?token=abc123"
-        }
-      ]
-    
-    Returns: PDF file yang sudah di-stamp (application/pdf)
+    Stamp tanda tangan digital & verifikasi anggaran ke PDF asli.
     """
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=422, detail="File harus berformat PDF")
 
-    try:
-        approvers_data = json.loads(approvers_json)
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=422, detail=f"approvers_json bukan JSON valid: {str(e)}")
-
-    if not isinstance(approvers_data, list) or len(approvers_data) == 0:
-        raise HTTPException(status_code=422, detail="approvers_json harus berisi array minimal 1 approver")
-
-    # Parse approver data
     approvers = []
-    for a in approvers_data:
-        approvers.append(ApproverStamp(
-            role=a.get("role", "Approver"),
-            name=a.get("name", "Unknown"),
-            jabatan=a.get("jabatan", ""),
-            signed_at=a.get("signed_at", ""),
-            verify_url=a.get("verify_url", ""),
-        ))
+    if approvers_json and approvers_json.strip():
+        try:
+            approvers_data = json.loads(approvers_json)
+            if isinstance(approvers_data, list):
+                for a in approvers_data:
+                    approvers.append(ApproverStamp(
+                        role=a.get("role", "Approver"),
+                        name=a.get("name", "Unknown"),
+                        jabatan=a.get("jabatan", ""),
+                        signed_at=a.get("signed_at", ""),
+                        verify_url=a.get("verify_url", ""),
+                    ))
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=422, detail=f"approvers_json bukan JSON valid: {str(e)}")
 
-    # Baca PDF asli
+    verf_stamp = None
+    if verf_anggaran_json and verf_anggaran_json.strip():
+        try:
+            v = json.loads(verf_anggaran_json)
+            if isinstance(v, dict):
+                verf_stamp = VerfAnggaranStamp(
+                    no_ppab=v.get("no_ppab", ""),
+                    sumber_rek=v.get("sumber_rek", ""),
+                    beban_rek=v.get("beban_rek", ""),
+                    rkap_1_tahun=float(v.get("rkap_1_tahun", 0)),
+                    realisasi=float(v.get("realisasi", 0)),
+                    permintaan=float(v.get("permintaan", 0)),
+                    sisa_anggaran=float(v.get("sisa_anggaran", 0)),
+                    verifier_name=v.get("verifier_name", "Verifikator"),
+                    verifier_signed_at=v.get("verifier_signed_at", ""),
+                    verify_url=v.get("verify_url", ""),
+                )
+        except Exception:
+            pass
+
     source_pdf_bytes = await file.read()
 
     try:
-        stamped_pdf_bytes = stamp_pdf(source_pdf_bytes, approvers)
+        stamped_pdf_bytes = stamp_pdf(source_pdf_bytes, approvers, verf_stamp)
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal stamp PDF: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Gagal stamp PDF: {str(e)}")
 
     return Response(

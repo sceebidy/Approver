@@ -65,7 +65,6 @@ export default function VerfAnggaranModal({
     setError(null);
   }, [existingData, isOpen]);
 
-  // Otomatis hitung sisa anggaran = RKAP - Realisasi - Permintaan (opsional pertolongan hitung)
   const calculateSisa = () => {
     const rkap = parseFloat(String(formData.rkap_1_tahun)) || 0;
     const realisasi = parseFloat(String(formData.realisasi)) || 0;
@@ -128,14 +127,14 @@ export default function VerfAnggaranModal({
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs" aria-modal role="dialog">
       <div className="relative z-10 w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-slate-50">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-[#F8F9FB]">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-[#1F3A5F]/10 text-[#1F3A5F] rounded-lg">
               <DollarSign size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Form Verifikasi Anggaran</h3>
-              <p className="text-xs text-slate-500">Lengkapi rincian anggaran untuk dokumen PPAB ini</p>
+              <h3 className="text-base font-bold text-[#111827]">Form Verifikasi Anggaran</h3>
+              <p className="text-xs text-[#6B7280]">Lengkapi rincian anggaran untuk dokumen PPAB ini</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-md transition-colors">
@@ -161,7 +160,7 @@ export default function VerfAnggaranModal({
               <label
                 className={`flex items-center justify-center gap-2 p-2.5 border rounded-lg cursor-pointer text-xs font-medium transition-all ${
                   formData.sumber_rek === "investasi"
-                    ? "border-blue-600 bg-blue-50/70 text-blue-800 ring-2 ring-blue-500/20"
+                    ? "border-[#1F3A5F] bg-[#1F3A5F]/10 text-[#1F3A5F] ring-2 ring-[#1F3A5F]/20 font-bold"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
@@ -179,7 +178,7 @@ export default function VerfAnggaranModal({
               <label
                 className={`flex items-center justify-center gap-2 p-2.5 border rounded-lg cursor-pointer text-xs font-medium transition-all ${
                   formData.sumber_rek === "eksploitasi"
-                    ? "border-blue-600 bg-blue-50/70 text-blue-800 ring-2 ring-blue-500/20"
+                    ? "border-[#1F3A5F] bg-[#1F3A5F]/10 text-[#1F3A5F] ring-2 ring-[#1F3A5F]/20 font-bold"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
@@ -206,7 +205,7 @@ export default function VerfAnggaranModal({
               value={formData.beban_rek}
               onChange={(e) => setFormData({ ...formData, beban_rek: e.target.value })}
               placeholder="Masukkan kode/pos beban rekening..."
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F3A5F] focus:border-[#1F3A5F]"
               required
             />
           </div>
@@ -225,7 +224,7 @@ export default function VerfAnggaranModal({
                   value={formData.rkap_1_tahun}
                   onChange={(e) => setFormData({ ...formData, rkap_1_tahun: e.target.value })}
                   placeholder="0"
-                  className="w-full pl-8 pr-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-8 pr-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F3A5F]"
                   required
                 />
               </div>
@@ -243,7 +242,7 @@ export default function VerfAnggaranModal({
                   value={formData.realisasi}
                   onChange={(e) => setFormData({ ...formData, realisasi: e.target.value })}
                   placeholder="0"
-                  className="w-full pl-8 pr-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-8 pr-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F3A5F]"
                   required
                 />
               </div>
@@ -261,7 +260,7 @@ export default function VerfAnggaranModal({
                   value={formData.permintaan}
                   onChange={(e) => setFormData({ ...formData, permintaan: e.target.value })}
                   placeholder="0"
-                  className="w-full pl-8 pr-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-8 pr-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F3A5F]"
                   required
                 />
               </div>
@@ -275,7 +274,7 @@ export default function VerfAnggaranModal({
                 <button
                   type="button"
                   onClick={calculateSisa}
-                  className="text-[10px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                  className="text-[10px] text-[#1F3A5F] hover:text-[#152843] font-bold flex items-center gap-1"
                   title="Hitung otomatis: RKAP - Realisasi - Permintaan"
                 >
                   <Calculator size={11} /> Hitung Sisa
@@ -289,7 +288,7 @@ export default function VerfAnggaranModal({
                   value={formData.sisa_anggaran}
                   onChange={(e) => setFormData({ ...formData, sisa_anggaran: e.target.value })}
                   placeholder="0"
-                  className="w-full pl-8 pr-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-8 pr-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1F3A5F]"
                   required
                 />
               </div>
@@ -309,7 +308,7 @@ export default function VerfAnggaranModal({
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-70"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#1F3A5F] hover:bg-[#152843] rounded-lg transition-colors shadow-sm disabled:opacity-70"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
               Simpan Verifikasi Anggaran

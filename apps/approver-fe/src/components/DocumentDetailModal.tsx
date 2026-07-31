@@ -332,20 +332,34 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
               {/* Verifikasi Anggaran Card (PPAB Specific) */}
               {docType === 'ppab' && (
                 <div className="bg-white border border-[#E3E6EA] rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-[#F8F9FB] px-4 py-2.5 border-b border-[#E3E6EA] flex items-center justify-between">
+                  <div className="bg-[#F8F9FB] px-4 py-2.5 border-b border-[#E3E6EA] flex items-center justify-between flex-wrap gap-2">
                     <h4 className="text-[13px] font-semibold text-[#374151] flex items-center gap-2">
                       <FileSpreadsheet size={16} className="text-[#1F3A5F]" />
                       Stamp Verifikasi Anggaran
                     </h4>
-                    {(userPendingLines.length > 0 || actualApprovers.some((l: any) => l.approver_id === data?.current_user_id)) && (
-                      <button
-                        onClick={() => setIsVerfModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-semibold rounded-md transition-all shadow-xs"
-                      >
-                        <Edit3 size={13} />
-                        {(data?.verf_anggaran || data?.verfAnggaran) ? "Edit Verifikasi Anggaran" : "Isi Verifikasi Anggaran"}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {(data?.verf_anggaran || data?.verfAnggaran) && (
+                        <button
+                          onClick={() => {
+                            const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+                            window.open(`${apiUrl}/ppab/${data.id}/preview-pdf`, '_blank');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-[12px] font-semibold rounded-md transition-all shadow-xs"
+                          title="Lihat Pratinjau PDF Asli dengan Stamp Merah Verifikasi Anggaran"
+                        >
+                          <FileText size={13} /> Cek PDF (Stamp Merah)
+                        </button>
+                      )}
+                      {(userPendingLines.length > 0 || actualApprovers.some((l: any) => l.approver_id === data?.current_user_id)) && (
+                        <button
+                          onClick={() => setIsVerfModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#1F3A5F] hover:bg-[#152843] text-white text-[12px] font-semibold rounded-md transition-all shadow-xs"
+                        >
+                          <Edit3 size={13} />
+                          {(data?.verf_anggaran || data?.verfAnggaran) ? "Edit Verifikasi Anggaran" : "Isi Verifikasi Anggaran"}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {(data?.verf_anggaran || data?.verfAnggaran) ? (
@@ -356,8 +370,8 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
                             <div>
                               <span className="text-[#6B7280] text-xs block mb-1">Sumber Rekening</span>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold uppercase tracking-wider ${
-                                String(verf.sumber_rek).toLowerCase() === 'investasi' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${
+                                String(verf.sumber_rek).toLowerCase() === 'investasi' ? 'bg-[#1F3A5F]/10 text-[#1F3A5F] border border-[#1F3A5F]/20' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                               }`}>
                                 {verf.sumber_rek}
                               </span>
@@ -383,7 +397,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                             </div>
                             <div className="p-3 bg-white border border-slate-200 rounded-lg">
                               <span className="text-[11px] text-slate-500 block uppercase font-medium">Permintaan</span>
-                              <span className="text-[14px] font-bold font-mono text-blue-700">
+                              <span className="text-[14px] font-bold font-mono text-[#1F3A5F]">
                                 Rp {Number(verf.permintaan || 0).toLocaleString('id-ID')}
                               </span>
                             </div>
@@ -403,7 +417,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                       {(userPendingLines.length > 0 || actualApprovers.some((l: any) => l.approver_id === data?.current_user_id)) && (
                         <button
                           onClick={() => setIsVerfModalOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md transition-all shadow-xs"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1F3A5F] hover:bg-[#152843] text-white text-xs font-semibold rounded-md transition-all shadow-xs"
                         >
                           <Edit3 size={14} /> Isi Verifikasi Anggaran Sekarang
                         </button>
@@ -672,7 +686,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                                     {docType === 'ppab' && (
                                       <button
                                         onClick={() => setIsVerfModalOpen(true)}
-                                        className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 text-white text-[11px] font-semibold rounded-md hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                                        className="flex items-center gap-1 px-2.5 py-1 bg-[#1F3A5F] text-white text-[11px] font-semibold rounded-md hover:bg-[#152843] active:scale-95 transition-all shadow-sm"
                                         title="Isi data Verifikasi Anggaran"
                                       >
                                         <FileSpreadsheet size={12} strokeWidth={2.5} />

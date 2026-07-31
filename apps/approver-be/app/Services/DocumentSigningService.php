@@ -179,21 +179,49 @@ class DocumentSigningService
             ];
         }, $signedApprovers);
 
+        // Siapkan data verifikasi anggaran jika ada
+        $verfAnggaranData = null;
+        if ($documentType === 'ppab') {
+            if (!$document->relationLoaded('verfAnggaran')) {
+                $document->load('verfAnggaran');
+            }
+            if ($document->verfAnggaran) {
+                $verf = $document->verfAnggaran;
+                $verfAnggaranData = [
+                    'no_ppab'             => $verf->no_ppab ?? $document->nomor_ppab ?? '',
+                    'sumber_rek'          => $verf->sumber_rek ?? '',
+                    'beban_rek'           => $verf->beban_rek ?? '',
+                    'rkap_1_tahun'        => (float)($verf->rkap_1_tahun ?? 0),
+                    'realisasi'           => (float)($verf->realisasi ?? 0),
+                    'permintaan'          => (float)($verf->permintaan ?? 0),
+                    'sisa_anggaran'       => (float)($verf->sisa_anggaran ?? 0),
+                    'verifier_name'       => $document->user->name ?? 'Verifikator Anggaran',
+                    'verifier_signed_at' => $verf->updated_at ? $verf->updated_at->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') : now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i'),
+                    'verify_url'          => rtrim(config('app.url', 'http://127.0.0.1:8000'), '/') . "/verify/ppab/{$document->id}/verf",
+                ];
+            }
+        }
+
         $pythonApiUrl = rtrim(env('PYTHON_API_URL', 'http://127.0.0.1:8001'), '/');
         $stampEndpoint = "{$pythonApiUrl}/stamp-pdf";
 
         Log::info("[DocumentSigning] Mengirim payload ke Python stamper", [
             'document_id' => $document->id,
             'approvers_count' => count($approversForStamper),
-            'approvers' => $approversForStamper
+            'has_verf_anggaran' => !empty($verfAnggaranData)
         ]);
 
         try {
+            $postParams = [
+                'approvers_json' => json_encode($approversForStamper),
+            ];
+            if ($verfAnggaranData) {
+                $postParams['verf_anggaran_json'] = json_encode($verfAnggaranData);
+            }
+
             $response = Http::timeout(30)
                 ->attach('file', file_get_contents($sourcePdfFullPath), basename($sourcePdfFullPath))
-                ->post($stampEndpoint, [
-                    'approvers_json' => json_encode($approversForStamper),
-                ]);
+                ->post($stampEndpoint, $postParams);
 
             if (!$response->successful()) {
                 Log::error("[DocumentSigning] Python stamp API error: " . $response->body());

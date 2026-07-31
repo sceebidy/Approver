@@ -206,6 +206,23 @@ class PpabController extends Controller
         ]);
     }
 
+    public function previewPdf($id)
+    {
+        $ppab = Ppab::with(['user:id,name', 'items.lineSpecs', 'subtotals', 'approverLines.approver:id,name', 'verfAnggaran'])->findOrFail($id);
+
+        $signingService = app(\App\Services\DocumentSigningService::class);
+        $pdfPath = $signingService->generateSignedPdf('ppab', $ppab);
+
+        if (!$pdfPath || !file_exists($pdfPath)) {
+            return response()->json(['success' => false, 'message' => 'Gagal membuat pratinjau PDF.'], 500);
+        }
+
+        return response()->file($pdfPath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="preview_ppab_' . $ppab->id . '.pdf"',
+        ]);
+    }
+
     public function destroy($id)
     {
         $ppab = Ppab::with('approverLines')->findOrFail($id);

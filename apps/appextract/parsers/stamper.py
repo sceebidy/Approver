@@ -31,6 +31,29 @@ class ApproverStamp:
     verify_url: str
 
 
+@dataclass
+class VerfAnggaranStamp:
+    """Data untuk stamp verifikasi anggaran."""
+    no_ppab: str = ""
+    sumber_rek: str = ""
+    beban_rek: str = ""
+    rkap_1_tahun: float = 0.0
+    realisasi: float = 0.0
+    permintaan: float = 0.0
+    sisa_anggaran: float = 0.0
+    verifier_name: str = ""
+    verifier_signed_at: str = ""
+    verify_url: str = ""
+
+
+def format_rp(val) -> str:
+    try:
+        num = float(val)
+        return f"Rp {num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return f"Rp {val}"
+
+
 def _generate_qr_image(data: str, size: int = 120) -> io.BytesIO:
     """Generate QR code image sebagai BytesIO PNG."""
     qr = qrcode.QRCode(
@@ -215,16 +238,15 @@ def _create_stamp_overlay(
     column_centers: List[float],
     box_top_y: float,
     box_bottom_y: float,
+    verf_anggaran: Optional[VerfAnggaranStamp] = None,
 ) -> io.BytesIO:
     """
-    Buat overlay PDF dengan stamp approver di bagian bawah.
-    Menampilkan QR Code (ukuran 40pt) dan teks "Ditandatangani secara elektronik" (5.5pt)
-    yang diposisikan pas dan sedikit lebih ke atas di dalam kotak tanda tangan.
+    Buat overlay PDF dengan stamp approver di bagian bawah dan/atau stamp verifikasi anggaran.
     """
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(page_width, page_height))
     
-    if not approvers:
+    if not approvers and not verf_anggaran:
         c.save()
         buf.seek(0)
         return buf
@@ -375,41 +397,169 @@ def _create_stamp_overlay(
         c.setFillColor(HexColor("#059669"))
         c.drawCentredString(col_center_x, current_label_y, "Ditandatangani secara elektronik")
     
+    # If budget verification stamp is provided, draw red stamp table below signature boxes
+    if verf_anggaran:
+        _draw_verf_anggaran_red_stamp(c, page_width, page_height, verf_anggaran, box_bottom_y, column_centers)
+
     c.save()
     buf.seek(0)
     return buf
 
 
+def _draw_verf_anggaran_red_stamp(
+    c: canvas.Canvas,
+    page_width: float,
+    page_height: float,
+    verf: VerfAnggaranStamp,
+    box_bottom_y: float,
+    column_centers: List[float],
+):
+    """
+    Draw a clean, right-aligned, red-outlined Budget Verification stamp table.
+    - Outer border: Red outline (#DC2626)
+    - Header background: White (#FFFFFF)
+    - Title & Labels: Red (#B91C1C)
+    - Data values: Black (#000000)
+    - Signature & QR Code: Placed at the bottom of the data table.
+    """
+    box_width = 240.0
+    box_height = 182.0
+    
+    # 1. Rapat Kanan (Right Aligned to right margin 36pt)
+    start_x = page_width - 36.0 - box_width
+    if start_x < 20.0:
+        start_x = 20.0
+
+    # 2. Position Y below signature boxes
+    top_y = box_bottom_y - 10.0
+    bottom_y = top_y - box_height
+    
+    # Jika di bawah tidak cukup tempat (spill bottom), posisikan rapat kanan sejajar area tanda tangan
+    if bottom_y < 15.0:
+        top_y = max(box_bottom_y + 180.0, page_height - 30.0)
+        bottom_y = top_y - box_height
+
+    red_color = HexColor("#B91C1C")
+    red_border = HexColor("#DC2626")
+    black_color = HexColor("#000000")
+    white_bg = HexColor("#FFFFFF")
+    
+    # 3. Outer Box Background (White) & Outline (Red)
+    c.setFillColor(white_bg)
+    c.setStrokeColor(red_border)
+    c.setLineWidth(1.2)
+    c.rect(start_x, bottom_y, box_width, box_height, stroke=1, fill=1)
+
+    # 4. Title Header (White BG with Red Text & Bottom Border)
+    header_height = 18.0
+    header_y = top_y - header_height
+    c.setStrokeColor(red_border)
+    c.setLineWidth(0.8)
+    c.line(start_x, header_y, start_x + box_width, header_y)
+
+    c.setFillColor(red_color)
+    c.setFont("Helvetica-Bold", 8.5)
+    c.drawCentredString(start_x + (box_width / 2.0), header_y + 5.0, "VERIFIKASI ANGGARAN")
+
+    # 5. Data Rows (Red Labels, Black Data Values)
+    rows = [
+        ("No. PPAB", str(verf.no_ppab or "-")),
+        ("Sumber Rek", str(verf.sumber_rek or "-").upper()),
+        ("Beban Rek", str(verf.beban_rek or "-")),
+        ("RKAP 1 Tahun", format_rp(verf.rkap_1_tahun)),
+        ("Realisasi s/d saat ini", format_rp(verf.realisasi)),
+        ("Permintaan", format_rp(verf.permintaan)),
+        ("Sisa Anggaran", format_rp(verf.sisa_anggaran)),
+    ]
+
+    curr_y = header_y - 11.5
+    row_gap = 12.0
+
+    for label, val in rows:
+        # Label (Warna Merah)
+        c.setFont("Helvetica-Bold", 6.8)
+        c.setFillColor(red_color)
+        c.drawString(start_x + 8.0, curr_y, label)
+        c.drawString(start_x + 102.0, curr_y, ":")
+
+        # Value (Warna Hitam)
+        c.setFont("Helvetica-Bold" if "Rp" in val or label == "No. PPAB" else "Helvetica", 6.8)
+        c.setFillColor(black_color)
+
+        # Truncate value if too long to avoid overflowing box
+        val_str = str(val)
+        if len(val_str) > 28:
+            val_str = val_str[:26] + "..."
+        c.drawString(start_x + 108.0, curr_y, val_str)
+
+        curr_y -= row_gap
+
+    # 6. Signature Section at the Bottom
+    sig_top_y = curr_y + 3.0
+    c.setStrokeColor(red_border)
+    c.setLineWidth(0.8)
+    c.line(start_x, sig_top_y, start_x + box_width, sig_top_y)
+
+    sig_center_x = start_x + (box_width / 2.0)
+
+    # Sig Title (Red)
+    c.setFont("Helvetica-Bold", 6.5)
+    c.setFillColor(red_color)
+    c.drawCentredString(sig_center_x, sig_top_y - 9.0, "TANDA TANGAN VERIFIKATOR")
+
+    # QR Code Image
+    qr_size = 35.0
+    qr_x = sig_center_x - (qr_size / 2.0)
+    qr_y = sig_top_y - 46.0
+
+    if verf.verify_url:
+        try:
+            qr_img_buf = _generate_qr_image(verf.verify_url)
+            qr_img = ImageReader(qr_img_buf)
+            c.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size)
+        except Exception:
+            c.setStrokeColor(HexColor("#CCCCCC"))
+            c.rect(qr_x, qr_y, qr_size, qr_size)
+
+    # Text "Ditandatangani secara elektronik" (Red)
+    c.setFont("Helvetica-Bold", 5.2)
+    c.setFillColor(red_color)
+    c.drawCentredString(sig_center_x, qr_y - 6.0, "Ditandatangani secara elektronik")
+
+    # Verifier Name & Signed Timestamp (Black)
+    c.setFont("Helvetica-Bold", 6.5)
+    c.setFillColor(black_color)
+    v_name = str(verf.verifier_name or "Verifikator")
+    if len(v_name) > 30:
+        v_name = v_name[:28] + "..."
+    c.drawCentredString(sig_center_x, qr_y - 13.0, v_name)
+
+    if verf.verifier_signed_at:
+        c.setFont("Helvetica", 5.5)
+        c.setFillColor(black_color)
+        c.drawCentredString(sig_center_x, qr_y - 20.0, str(verf.verifier_signed_at))
+
+
 def stamp_pdf(
     source_pdf_bytes: bytes,
     approvers: List[ApproverStamp],
+    verf_anggaran: Optional[VerfAnggaranStamp] = None,
     stamp_area_height: float = 80,
 ) -> bytes:
     """
     Stamp tanda tangan digital ke PDF asli.
-    
-    Args:
-        source_pdf_bytes: Bytes dari PDF asli
-        approvers: List data approver yang akan di-stamp
-        stamp_area_height: Ignored (posisi dideteksi secara dinamis)
-    
-    Returns:
-        Bytes PDF yang sudah di-stamp
     """
     reader = PdfReader(io.BytesIO(source_pdf_bytes))
     writer = PdfWriter()
     
     last_page_idx = len(reader.pages) - 1
     
-    # Deteksi posisi kotak tanda tangan secara dinamis pada halaman terakhir
     column_centers, box_top_y, box_bottom_y = _detect_signature_boxes_from_pdf(
         source_pdf_bytes, page_idx=last_page_idx
     )
     
-    # Copy semua halaman
     for i, page in enumerate(reader.pages):
         if i == last_page_idx:
-            # Halaman terakhir — tambahkan stamp overlay
             page_width = float(page.mediabox.width)
             page_height = float(page.mediabox.height)
             
@@ -420,6 +570,7 @@ def stamp_pdf(
                 column_centers=column_centers,
                 box_top_y=box_top_y,
                 box_bottom_y=box_bottom_y,
+                verf_anggaran=verf_anggaran,
             )
             
             overlay_reader = PdfReader(overlay_buf)
