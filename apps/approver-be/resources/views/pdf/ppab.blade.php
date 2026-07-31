@@ -4,87 +4,254 @@
     <meta charset="UTF-8">
     <title>PPAB - {{ $doc->nomor_ppab ?? $doc->id }}</title>
     <style>
-        @page { margin: 25px 30px; }
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #1f2937; line-height: 1.4; }
-        .header-table { width: 100%; border-bottom: 2px solid #1f3a5f; padding-bottom: 8px; margin-bottom: 15px; }
-        .company-name { font-size: 16px; font-weight: bold; color: #1f3a5f; text-transform: uppercase; }
-        .doc-title { font-size: 14px; font-weight: bold; text-align: right; color: #374151; }
-        .meta-table { width: 100%; margin-bottom: 15px; border-collapse: collapse; }
-        .meta-table td { padding: 3px 0; vertical-align: top; }
-        .meta-label { width: 130px; color: #6b7280; font-weight: 500; }
-        
-        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .items-table th { background-color: #1f3a5f; color: #ffffff; font-weight: 600; text-align: left; padding: 6px 8px; font-size: 10.5px; }
-        .items-table td { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; vertical-align: top; }
+        @page {
+            margin: 12mm 15mm;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 9.5px;
+            color: #000000;
+            line-height: 1.3;
+            margin: 0;
+            padding: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        /* Kop Surat Table */
+        .header-container {
+            width: 100%;
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .header-table td, .header-table th {
+            border: 1px solid #000000;
+            padding: 4px 6px;
+            vertical-align: middle;
+            box-sizing: border-box;
+        }
+        .logo-cell {
+            width: 18%;
+            text-align: center;
+            padding: 4px !important;
+            vertical-align: middle;
+        }
+        .logo-img {
+            display: block;
+            margin: 0 auto;
+            max-width: 95%;
+            height: auto;
+        }
+        .company-cell {
+            width: 48%;
+            text-align: center;
+        }
+        .company-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: underline;
+            color: #000000;
+            letter-spacing: 0.3px;
+        }
+        .company-subtitle {
+            font-size: 8.5px;
+            color: #000000;
+            font-weight: bold;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+        .company-address {
+            font-size: 7.5px;
+            color: #000000;
+            margin-top: 3px;
+            line-height: 1.2;
+        }
+        .meta-title-cell {
+            width: 17%;
+            font-weight: bold;
+            font-size: 9px;
+            color: #000000;
+            text-align: center;
+        }
+        .meta-value-cell {
+            width: 17%;
+            font-size: 9.5px;
+            text-align: center;
+            color: #000000;
+        }
+        .doc-title-cell {
+            font-size: 11px;
+            font-weight: bold;
+            color: #000000;
+            text-align: center;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        /* Bingkai Metadata (Table Border-Collapse untuk Mencegah Overflow Garis Kanan) */
+        .info-bingkai-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-left: 1px solid #000000;
+            border-right: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+            border-top: none;
+        }
+        .info-bingkai-table > tbody > tr > td {
+            padding: 6px 10px;
+            border: none !important;
+            vertical-align: top;
+        }
+        .inner-info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .inner-info-table td {
+            border: none !important;
+            padding: 1.5px 0 !important;
+            font-size: 9.5px;
+            color: #000000;
+        }
+
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-left: 1px solid #000000;
+            border-right: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+            border-top: none;
+            margin-bottom: 15px;
+        }
+        .items-table th {
+            border: 1px solid #000000;
+            font-weight: bold;
+            padding: 5px;
+            text-align: center;
+            font-size: 9.5px;
+            color: #000000;
+        }
+        .items-table td {
+            border: 1px solid #000000;
+            padding: 5px;
+            vertical-align: top;
+            font-size: 9px;
+            color: #000000;
+        }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
-        .spec-list { margin: 4px 0 0 0; padding-left: 14px; color: #6b7280; font-size: 9.5px; }
-        
-        .subtotals-box { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 12px; margin-bottom: 20px; float: right; width: 320px; }
-        .subtotals-table { width: 100%; font-size: 10.5px; }
-        .subtotals-table td { padding: 3px 0; }
+        .spec-list { margin: 3px 0 0 0; padding-left: 14px; color: #4b5563; font-size: 8.5px; }
+
+        .subtotals-box { border: 1px solid #000000; padding: 6px 10px; margin-bottom: 15px; float: right; width: 300px; }
+        .subtotals-table { width: 100%; font-size: 9.5px; }
+        .subtotals-table td { padding: 2px 0; }
         .clear { clear: both; }
 
-        .signatures-section { margin-top: 25px; page-break-inside: avoid; }
-        .signatures-header { font-size: 11px; font-weight: bold; color: #1f3a5f; border-bottom: 1px solid #d1d5db; padding-bottom: 4px; margin-bottom: 12px; }
-        .signatures-table { width: 100%; border-collapse: collapse; }
-        .signature-cell { vertical-align: top; text-align: center; padding: 5px; width: 33.33%; }
-        .signature-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; background-color: #ffffff; }
-        .role-title { font-weight: bold; font-size: 10px; color: #374151; text-transform: uppercase; margin-bottom: 6px; }
-        .qr-img { width: 75px; height: 75px; margin: 0 auto; }
-        .signed-notice { font-size: 8px; color: #059669; font-weight: bold; margin-top: 4px; }
-        .signer-name { font-size: 10px; font-weight: bold; color: #111827; margin-top: 4px; }
-        .signer-title { font-size: 8.5px; color: #6b7280; }
-        .signed-date { font-size: 8px; color: #9ca3af; margin-top: 2px; }
+        /* Signatures Section */
+        .signature-table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+            page-break-inside: avoid;
+        }
+        .signature-cell {
+            vertical-align: top;
+            padding: 4px;
+            text-align: center;
+        }
+        .signature-box {
+            text-align: center;
+        }
+        .role-label {
+            font-weight: bold;
+            font-size: 9.5px;
+            margin-bottom: 4px;
+            color: #000000;
+        }
+        .qr-code-img {
+            width: 55px;
+            height: 55px;
+            margin: 2px auto;
+            display: block;
+        }
+        .signer-name {
+            font-weight: bold;
+            margin-top: 4px;
+            font-size: 9px;
+            color: #000000;
+        }
+        .signer-dept {
+            font-size: 8px;
+            color: #000000;
+        }
+        .digital-sig-text {
+            font-size: 7.5px;
+            color: #000000;
+            font-style: italic;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
-    <table class="header-table">
-        <tr>
-            <td>
-                <div class="company-name">PT. Industri Nabati Lestari</div>
-                <div style="font-size: 9px; color: #6b7280;">Pengajuan Pembelian Anggaran Biaya (PPAB)</div>
-            </td>
-            <td class="doc-title">
-                PPAB<br>
-                <span style="font-size: 11px; font-weight: normal; color: #6b7280;">
-                    No: {{ $doc->nomor_ppab ?? ('PPAB-' . $doc->id) }}
-                </span>
-            </td>
-        </tr>
+
+    <!-- 1. Kop Surat Header Table -->
+    @include('pdf.header', [
+        'docNo' => 'INLHO/PPAB-F/001',
+        'tglBerlaku' => '12-Nov-18',
+        'noRevisi' => '00',
+        'docTitle' => 'PROPOSAL PERMINTAAN ALOKASI BIAYA (PPAB)'
+    ])
+
+    <!-- 2. Bingkai Metadata -->
+    <table class="info-bingkai-table">
+        <tbody>
+            <tr>
+                <td style="width: 58%;">
+                    <table class="inner-info-table">
+                        <tr>
+                            <td style="width: 100px; font-weight: bold;">DATE</td>
+                            <td style="width: 15px; text-align: center;">:</td>
+                            <td>{{ $doc->created_at ? \Carbon\Carbon::parse($doc->created_at)->format('d/m/Y H:i:s') : '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold;">REQUESTED BY</td>
+                            <td style="text-align: center;">:</td>
+                            <td>{{ $doc->user->name ?? '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold;">DEPARTMENT</td>
+                            <td style="text-align: center;">:</td>
+                            <td>{{ $doc->deskripsi ?? '-' }}</td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 42%;">
+                    <table class="inner-info-table">
+                        <tr>
+                            <td style="width: 105px; font-weight: bold;">FORM NO</td>
+                            <td style="width: 15px; text-align: center;">:</td>
+                            <td>{{ $doc->nomor_ppab ?? '-' }}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
     </table>
 
-    <table class="meta-table">
-        <tr>
-            <td class="meta-label">Nomor PPAB</td>
-            <td>: <strong>{{ $doc->nomor_ppab ?? '-' }}</strong></td>
-            <td class="meta-label">Tanggal Dibuat</td>
-            <td>: {{ $doc->created_at ? \Carbon\Carbon::parse($doc->created_at)->format('d F Y H:i') : '-' }}</td>
-        </tr>
-        <tr>
-            <td class="meta-label">Deskripsi</td>
-            <td>: {{ $doc->deskripsi ?? '-' }}</td>
-            <td class="meta-label">Pemohon</td>
-            <td>: {{ $doc->user->name ?? '-' }}</td>
-        </tr>
-        <tr>
-            <td class="meta-label">Status Dokumen</td>
-            <td>: <span style="color: #059669; font-weight: bold;">SELESAI (TANDA TANGAN DIGITAL TERVERIFIKASI)</span></td>
-            <td></td>
-            <td></td>
-        </tr>
-    </table>
-
-    <!-- Tabel Rincian Item PPAB -->
+    <!-- 3. Tabel Rincian Item PPAB -->
     <table class="items-table">
         <thead>
             <tr>
-                <th style="width: 25px;" class="text-center">No</th>
-                <th>Deskripsi / Spesifikasi Item</th>
-                <th style="width: 45px;" class="text-center">Satuan</th>
-                <th style="width: 45px;" class="text-right">Qty</th>
-                <th style="width: 100px;" class="text-right">Harga Satuan</th>
-                <th style="width: 110px;" class="text-right">Subtotal</th>
+                <th style="width: 25px;" class="text-center">NO</th>
+                <th>DESCRIPTION</th>
+                <th style="width: 50px;" class="text-center">SATUAN</th>
+                <th style="width: 45px;" class="text-right">QTY</th>
+                <th style="width: 100px;" class="text-right">HARGA SATUAN</th>
+                <th style="width: 110px;" class="text-right">SUBTOTAL</th>
             </tr>
         </thead>
         <tbody>
@@ -140,7 +307,7 @@
             <table class="subtotals-table">
                 <tr>
                     <td style="font-weight: bold;">Total Keseluruhan</td>
-                    <td class="text-right" style="font-weight: bold; color: #1f3a5f;">
+                    <td class="text-right" style="font-weight: bold;">
                         IDR {{ number_format($grandTotal, 0, ',', '.') }}
                     </td>
                 </tr>
@@ -149,26 +316,28 @@
         <div class="clear"></div>
     @endif
 
-    <div class="signatures-section">
-        <div class="signatures-header">TANDA TANGAN ELEKTRONIK TERVERIFIKASI</div>
-        <table class="signatures-table">
+    <!-- 4. Baris Tanda Tangan Dinamis -->
+    @if(isset($signedApprovers) && count($signedApprovers) > 0)
+        <table class="signature-table">
             <tr>
                 @foreach($signedApprovers as $approver)
-                    <td class="signature-cell">
-                        <div class="signature-card">
-                            <div class="role-title">{{ str_replace('_', ' ', $approver['role']) }}</div>
+                    <td class="signature-cell" style="width: {{ 100 / count($signedApprovers) }}%;">
+                        <div class="signature-box">
+                            <div class="role-label">{{ str_replace('_', ' ', $approver['role']) }}</div>
                             @if(!empty($approver['qr_code_base64']))
-                                <img src="{{ $approver['qr_code_base64'] }}" class="qr-img" alt="QR Code">
+                                <img src="{{ $approver['qr_code_base64'] }}" class="qr-code-img" alt="QR Code">
+                            @else
+                                <div style="height: 55px;"></div>
                             @endif
-                            <div class="signed-notice">Ditandatangani secara elektronik</div>
+                            <div class="digital-sig-text">Ditandatangani secara elektronik</div>
                             <div class="signer-name">{{ $approver['name'] }}</div>
-                            <div class="signer-title">{{ $approver['jabatan'] }}</div>
-                            <div class="signed-date">{{ $approver['signed_at'] }}</div>
+                            <div class="signer-dept">{{ $approver['jabatan'] }}</div>
                         </div>
                     </td>
                 @endforeach
             </tr>
         </table>
-    </div>
+    @endif
+
 </body>
 </html>

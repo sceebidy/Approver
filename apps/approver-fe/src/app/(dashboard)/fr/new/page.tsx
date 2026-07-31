@@ -124,18 +124,33 @@ export default function NewFrPage() {
 
     async function fetchMeta() {
       try {
-        const res = await fetch("/api/fr/categories", {
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
-        if (res.ok) {
-          const json = await res.json();
+        const [resCat, resTax] = await Promise.all([
+          fetch("/api/fr/categories", {
+            headers: { Accept: "application/json" },
+            credentials: "include",
+          }),
+          fetch("/api/admin/tax", {
+            headers: { Accept: "application/json" },
+            credentials: "include",
+          }),
+        ]);
+
+        if (resCat.ok) {
+          const json = await resCat.json();
           if (json.success && json.data) {
             setCategories(json.data.categories || []);
-            setTaxes(json.data.taxes || []);
             if (json.data.categories?.length > 0) {
               setKategoriFrId(json.data.categories[0].id);
             }
+          }
+        }
+
+        if (resTax.ok) {
+          const jsonTax = await resTax.json();
+          if (jsonTax.success && Array.isArray(jsonTax.data)) {
+            setTaxes(jsonTax.data);
+          } else if (Array.isArray(jsonTax)) {
+            setTaxes(jsonTax);
           }
         }
       } catch (err) {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { LayoutGrid, ClipboardList, FileText, CheckCircle2, Wallet, User, LogOut, Menu, X, ChevronLeft, ChevronRight, History, ShieldCheck } from "lucide-react";
+import { LayoutGrid, ClipboardList, FileText, CheckCircle2, Wallet, User, LogOut, Menu, X, ChevronLeft, ChevronRight, History, ShieldCheck, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 function NavItem({ icon: Icon, label, href, onClick, isCollapsed }: { icon: LucideIcon; label: string; href: string; onClick?: () => void; isCollapsed?: boolean }) {
@@ -14,7 +14,7 @@ function NavItem({ icon: Icon, label, href, onClick, isCollapsed }: { icon: Luci
       href={href}
       onClick={onClick}
       title={isCollapsed ? label : undefined}
-      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-md text-[13.5px] transition-all duration-200 ${
+      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13.5px] transition-all duration-200 ${
         active 
           ? "bg-[#1F3A5F] text-white font-medium shadow-sm" 
           : "text-[#4B5563] hover:bg-[#F1F3F6]"
@@ -118,9 +118,9 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <nav className={`flex-1 ${collapsed ? "px-2" : "px-3.5"} py-5 space-y-1 text-sm overflow-y-auto overflow-x-hidden`}>
+      <nav className={`flex-1 ${collapsed ? "px-2" : "px-3.5"} py-2.5 space-y-0.5 text-sm overflow-y-auto overflow-x-hidden`}>
         {collapsed && (
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-2">
              <button 
               className="hidden md:flex p-1.5 rounded-md text-[#4B5563] hover:bg-[#E3E6EA] transition-colors shrink-0"
               onClick={() => setIsCollapsed(false)}
@@ -134,14 +134,14 @@ export default function Sidebar() {
         <NavItem icon={LayoutGrid} label="Dashboard" href="/" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
         <NavItem icon={History} label="Riwayat Dokumen" href="/history" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
         
-        <div className={`pt-5 pb-2 ${collapsed ? "px-0 text-center" : "px-3"} text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]`}>
+        <div className={`pt-2.5 pb-1 ${collapsed ? "px-0 text-center" : "px-3"} text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]`}>
           {collapsed ? "..." : "Procurement"}
         </div>
         <NavItem icon={ClipboardList} label="PPAB" href="/ppab" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
         <NavItem icon={FileText} label="Purchase Order" href="/po" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
         <NavItem icon={CheckCircle2} label="MIS" href="/mis" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
         
-        <div className={`pt-5 pb-2 ${collapsed ? "px-0 text-center" : "px-3"} text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]`}>
+        <div className={`pt-2.5 pb-1 ${collapsed ? "px-0 text-center" : "px-3"} text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]`}>
            {collapsed ? "..." : "Financial"}
         </div>
         <NavItem icon={Wallet} label="Fund Request" href="/fr" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
@@ -149,10 +149,10 @@ export default function Sidebar() {
 
         {user && ["super_admin", "admin"].includes(user.role?.toLowerCase()) && (
           <>
-            <div className={`pt-5 pb-2 ${collapsed ? "px-0 text-center" : "px-3"} text-[11px] font-bold uppercase tracking-wider text-red-600`}>
+            <div className={`pt-2.5 pb-1 ${collapsed ? "px-0 text-center" : "px-3"} text-[11px] font-bold uppercase tracking-wider text-red-600`}>
               {collapsed ? "..." : "Admin"}
             </div>
-            <NavItem icon={ShieldCheck} label="Semua Request" href="/admin/requests" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
+            <NavItem icon={Settings} label="Admin Control" href="/admin" onClick={() => setIsMobileMenuOpen(false)} isCollapsed={collapsed} />
           </>
         )}
       </nav>

@@ -25,6 +25,7 @@ use App\Http\Controllers\FrController;
 use App\Http\Controllers\FsController;
 use App\Http\Controllers\DocumentSigningController;
 use App\Http\Controllers\ApproverKategoriFrController;
+use App\Http\Controllers\TaxController;
 
 // Public Routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -34,6 +35,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
+    // Admin routes
+    Route::get('/admin/requests', [\App\Http\Controllers\SubmissionController::class, 'adminRequests']);
+    Route::get('/admin/tax', [TaxController::class, 'index']);
+    Route::post('/admin/tax', [TaxController::class, 'store']);
+    Route::put('/admin/tax/{id}', [TaxController::class, 'update']);
+    Route::delete('/admin/tax/{id}', [TaxController::class, 'destroy']);
     // Portal API proxy routes
     Route::get('/portal/employees', [PortalController::class, 'employees']);
     Route::get('/portal/grades', [PortalController::class, 'grades']);
@@ -47,9 +54,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/submissions/history', [\App\Http\Controllers\SubmissionController::class, 'allHistory']);
     Route::post('/submissions/{type}/{lineId}/approve', [\App\Http\Controllers\SubmissionController::class, 'approve']);
     Route::post('/submissions/{type}/{lineId}/reject', [\App\Http\Controllers\SubmissionController::class, 'reject']);
-
-    // Admin routes
-    Route::get('/admin/requests', [\App\Http\Controllers\SubmissionController::class, 'adminRequests']);
 
     // PPAB
     Route::get('/ppab',  [PpabController::class, 'index']);
