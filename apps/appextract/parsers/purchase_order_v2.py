@@ -63,13 +63,19 @@ def parse(text: str) -> dict:
         m2 = sub_pattern.match(line)
         if m2:
             desc, next_i = _collect_desc(i + 1, m2.group(1))
-            items.append({
-                "sub_item": True,
-                "deskripsi": desc,
-                "qty": int(m2.group(2)),
-                "satuan": m2.group(3),
-                "harga_satuan": clean_num(m2.group(4)),
-            })
+            if items:
+                # Lampirkan deskripsi rincian/spesifikasi ke item utama sebelumnya tanpa menambah baris item baru berpemberatan harga ganda
+                existing_spec = items[-1].get("spec", "")
+                items[-1]["spec"] = f"{existing_spec} {desc}".strip() if existing_spec else desc.strip()
+            else:
+                items.append({
+                    "no": 1,
+                    "deskripsi": desc.strip(),
+                    "qty": int(m2.group(2)),
+                    "satuan": m2.group(3),
+                    "harga_satuan": clean_num(m2.group(4)),
+                    "jumlah": clean_num(m2.group(4)),
+                })
             i = next_i
             continue
         i += 1
