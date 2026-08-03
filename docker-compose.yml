@@ -1,3 +1,4 @@
+
 version: "3.8"
 
 services:
@@ -12,7 +13,7 @@ services:
     volumes:
       - ./apps/approver-be:/var/www/html
     ports:
-      - "3014:80"       # Port BE (melanjutkan meetrip: 3012, hsse: 3013)
+      - "3014:80"
     networks:
       - approver-internal
     depends_on:
@@ -30,7 +31,7 @@ services:
     env_file:
       - ./apps/approver-fe/.env.local
     ports:
-      - "8097:3000"     # Port FE (melanjutkan meetrip: 8095, hsse: 8096)
+      - "8097:3000"
     networks:
       - approver-internal
     depends_on:
@@ -45,7 +46,7 @@ services:
     volumes:
       - ./apps/appextract:/app
     ports:
-      - "8280:8000"     # Port Python service
+      - "8280:8000"
     networks:
       - approver-internal
 
