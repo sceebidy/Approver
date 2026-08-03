@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  approval-be:
+    build:
+      context: ./apps/approver-be
+      dockerfile: Dockerfile
+    container_name: approver_be
+    restart: unless-stopped
+    env_file:
+      - ./apps/approver-be/.env
+    volumes:
+      - ./apps/approver-be:/var/www/html
+    ports:
+      - "3014:80"       # Port BE (melanjutkan meetrip: 3012, hsse: 3013)
+    networks:
+      - approver-internal
+    depends_on:
+      - appextract
+
+  approval-fe:
+    build:
+      context: ./apps/approver-fe
+      dockerfile: Dockerfile
+    container_name: approver_fe
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - ./apps/approver-fe/.env.local
+    ports:
+      - "8097:3000"     # Port FE (melanjutkan meetrip: 8095, hsse: 8096)
+    networks:
+      - approver-internal
+    depends_on:
+      - approval-be
+
+  appextract:
+    build:
+      context: ./apps/appextract
+      dockerfile: Dockerfile
+    container_name: approver_python
+    restart: unless-stopped
+    volumes:
+      - ./apps/appextract:/app
+    ports:
+      - "8280:8000"     # Port Python service
+    networks:
+      - approver-internal
+
+networks:
+  approver-internal:
+    driver: bridge
