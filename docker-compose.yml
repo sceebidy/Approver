@@ -49,8 +49,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./apps/appextract:/app
-    ports:
-      - "8280:8000"
     networks:
       - approver-internal
 
