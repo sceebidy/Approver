@@ -1,6 +1,6 @@
 FROM node:18-alpine AS build
 WORKDIR /app
-ARG BACKEND_URL=http://approval-be
+ARG BACKEND_URL=http://approval-be:8080
 ENV BACKEND_URL=$BACKEND_URL
 COPY package*.json ./
 RUN npm install
@@ -10,7 +10,7 @@ RUN NEXT_TELEMETRY_DISABLED=1 npm run build -- --no-lint
 FROM node:18-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ARG BACKEND_URL=http://approval-be
+ARG BACKEND_URL=http://approval-be:8080
 ENV BACKEND_URL=$BACKEND_URL
 COPY --from=build /app/public ./public
 COPY --from=build /app/.next/standalone ./

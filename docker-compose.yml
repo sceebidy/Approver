@@ -8,12 +8,14 @@ services:
       dockerfile: Dockerfile
     container_name: approver_be
     restart: unless-stopped
+    environment:
+      - HTTP_PORT=8080
     env_file:
       - ./apps/approver-be/.env
     volumes:
       - ./apps/approver-be:/var/www/html
     ports:
-      - "3014:80"
+      - "3014:8080"
     networks:
       - approver-internal
     depends_on:
@@ -24,12 +26,12 @@ services:
       context: ./apps/approver-fe
       dockerfile: Dockerfile
       args:
-        BACKEND_URL: http://approval-be
+        BACKEND_URL: http://approval-be:8080
     container_name: approver_fe
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - BACKEND_URL=http://approval-be
+      - BACKEND_URL=http://approval-be:8080
     env_file:
       - ./apps/approver-fe/.env.local
     ports:
