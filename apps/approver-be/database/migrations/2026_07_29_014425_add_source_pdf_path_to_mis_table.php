@@ -13,9 +13,11 @@ class AddSourcePdfPathToMisTable extends Migration
      */
     public function up()
     {
-        Schema::table('mis', function (Blueprint $table) {
-            $table->string('source_pdf_path')->nullable()->after('nomor_mis');
-        });
+        if (Schema::hasTable('mis') && !Schema::hasColumn('mis', 'source_pdf_path')) {
+            Schema::table('mis', function (Blueprint $table) {
+                $table->string('source_pdf_path')->nullable();
+            });
+        }
     }
 
     /**
@@ -25,8 +27,10 @@ class AddSourcePdfPathToMisTable extends Migration
      */
     public function down()
     {
-        Schema::table('mis', function (Blueprint $table) {
-            $table->dropColumn('source_pdf_path');
-        });
+        if (Schema::hasTable('mis') && Schema::hasColumn('mis', 'source_pdf_path')) {
+            Schema::table('mis', function (Blueprint $table) {
+                $table->dropColumn('source_pdf_path');
+            });
+        }
     }
 }
