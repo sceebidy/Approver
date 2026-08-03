@@ -396,29 +396,21 @@ def _draw_verf_anggaran_red_stamp(
     column_centers: List[float],
 ):
     """
-    Draw a clean, right-aligned, red-outlined Budget Verification stamp table.
-    - Outer border: Red outline (#DC2626)
-    - Header background: White (#FFFFFF)
-    - Title & Labels: Red (#B91C1C)
-    - Data values: Black (#000000)
-    - Signature & QR Code: Placed at the bottom of the data table.
+    Draw a clean, right-aligned, compact red-outlined Budget Verification stamp table.
+    Designed with a compact height (~96pt) to easily fit into small gaps at the bottom
+    of the page below all main document content.
     """
-    box_width = 240.0
-    box_height = 182.0
+    box_width = 230.0
+    box_height = 96.0
     
-    # 1. Rapat Kanan (Right Aligned to right margin 36pt)
-    start_x = page_width - 36.0 - box_width
-    if start_x < 20.0:
-        start_x = 20.0
+    # 1. Rapat Kanan (Right Aligned to right margin 24pt)
+    start_x = page_width - 24.0 - box_width
+    if start_x < 15.0:
+        start_x = 15.0
 
-    # 2. Position Y below signature boxes
-    top_y = box_bottom_y - 10.0
-    bottom_y = top_y - box_height
-    
-    # Jika di bawah tidak cukup tempat (spill bottom), posisikan rapat kanan sejajar area tanda tangan
-    if bottom_y < 15.0:
-        top_y = max(box_bottom_y + 180.0, page_height - 30.0)
-        bottom_y = top_y - box_height
+    # 2. Position Y at the bottom of the page margin
+    bottom_y = 12.0
+    top_y = bottom_y + box_height
 
     red_color = HexColor("#B91C1C")
     red_border = HexColor("#DC2626")
@@ -428,70 +420,83 @@ def _draw_verf_anggaran_red_stamp(
     # 3. Outer Box Background (White) & Outline (Red)
     c.setFillColor(white_bg)
     c.setStrokeColor(red_border)
-    c.setLineWidth(1.2)
+    c.setLineWidth(1.0)
     c.rect(start_x, bottom_y, box_width, box_height, stroke=1, fill=1)
 
     # 4. Title Header (White BG with Red Text & Bottom Border)
-    header_height = 18.0
+    header_height = 14.0
     header_y = top_y - header_height
     c.setStrokeColor(red_border)
-    c.setLineWidth(0.8)
+    c.setLineWidth(0.6)
     c.line(start_x, header_y, start_x + box_width, header_y)
 
     c.setFillColor(red_color)
-    c.setFont("Helvetica-Bold", 8.5)
-    c.drawCentredString(start_x + (box_width / 2.0), header_y + 5.0, "VERIFIKASI ANGGARAN")
+    c.setFont("Helvetica-Bold", 7.5)
+    c.drawCentredString(start_x + (box_width / 2.0), header_y + 3.5, "VERIFIKASI ANGGARAN")
 
-    # 5. Data Rows (Red Labels, Black Data Values)
-    rows = [
+    # 5. Data Grid (2-column compact grid to save vertical space)
+    left_rows = [
         ("No. PPAB", str(verf.no_ppab or "-")),
         ("Sumber Rek", str(verf.sumber_rek or "-").upper()),
         ("Beban Rek", str(verf.beban_rek or "-")),
-        ("RKAP 1 Tahun", format_rp(verf.rkap_1_tahun)),
-        ("Realisasi s/d saat ini", format_rp(verf.realisasi)),
+    ]
+    right_rows = [
+        ("RKAP 1 Thn", format_rp(verf.rkap_1_tahun)),
+        ("Realisasi", format_rp(verf.realisasi)),
         ("Permintaan", format_rp(verf.permintaan)),
         ("Sisa Anggaran", format_rp(verf.sisa_anggaran)),
     ]
 
-    curr_y = header_y - 11.5
-    row_gap = 12.0
+    grid_top_y = header_y - 9.0
+    row_gap = 8.5
 
-    for label, val in rows:
-        # Label (Warna Merah)
-        c.setFont("Helvetica-Bold", 6.8)
+    # Draw Left Column
+    for i, (label, val) in enumerate(left_rows):
+        curr_y = grid_top_y - (i * row_gap)
+        c.setFont("Helvetica-Bold", 5.5)
         c.setFillColor(red_color)
-        c.drawString(start_x + 8.0, curr_y, label)
-        c.drawString(start_x + 102.0, curr_y, ":")
+        c.drawString(start_x + 4.0, curr_y, label)
+        c.drawString(start_x + 46.0, curr_y, ":")
 
-        # Value (Warna Hitam)
-        c.setFont("Helvetica-Bold" if "Rp" in val or label == "No. PPAB" else "Helvetica", 6.8)
+        c.setFont("Helvetica-Bold" if label == "No. PPAB" else "Helvetica", 5.5)
         c.setFillColor(black_color)
-
-        # Truncate value if too long to avoid overflowing box
         val_str = str(val)
-        if len(val_str) > 28:
-            val_str = val_str[:26] + "..."
-        c.drawString(start_x + 108.0, curr_y, val_str)
+        if len(val_str) > 16:
+            val_str = val_str[:15] + ".."
+        c.drawString(start_x + 50.0, curr_y, val_str)
 
-        curr_y -= row_gap
+    # Vertical separator line between left & right columns
+    sep_x = start_x + 108.0
+    grid_bottom_y = grid_top_y - (3.8 * row_gap)
+    c.setStrokeColor(HexColor("#FCA5A5"))
+    c.setLineWidth(0.4)
+    c.line(sep_x, header_y, sep_x, grid_bottom_y)
 
-    # 6. Signature Section at the Bottom
-    sig_top_y = curr_y + 3.0
+    # Draw Right Column
+    for i, (label, val) in enumerate(right_rows):
+        curr_y = grid_top_y - (i * row_gap)
+        c.setFont("Helvetica-Bold", 5.5)
+        c.setFillColor(red_color)
+        c.drawString(sep_x + 4.0, curr_y, label)
+        c.drawString(sep_x + 48.0, curr_y, ":")
+
+        c.setFont("Helvetica-Bold" if "Rp" in val else "Helvetica", 5.5)
+        c.setFillColor(black_color)
+        val_str = str(val)
+        if len(val_str) > 17:
+            val_str = val_str[:16] + ".."
+        c.drawString(sep_x + 52.0, curr_y, val_str)
+
+    # 6. Divider Line before Signature Section
+    sig_top_y = grid_bottom_y - 2.0
     c.setStrokeColor(red_border)
-    c.setLineWidth(0.8)
+    c.setLineWidth(0.6)
     c.line(start_x, sig_top_y, start_x + box_width, sig_top_y)
 
-    sig_center_x = start_x + (box_width / 2.0)
-
-    # Sig Title (Red)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.setFillColor(red_color)
-    c.drawCentredString(sig_center_x, sig_top_y - 9.0, "TANDA TANGAN VERIFIKATOR")
-
-    # QR Code Image
-    qr_size = 35.0
-    qr_x = sig_center_x - (qr_size / 2.0)
-    qr_y = sig_top_y - 46.0
+    # 7. Signature & QR Code Section (Side-by-side layout)
+    qr_size = 25.0
+    qr_x = start_x + 8.0
+    qr_y = sig_top_y - qr_size - 3.0
 
     if verf.verify_url:
         try:
@@ -502,23 +507,27 @@ def _draw_verf_anggaran_red_stamp(
             c.setStrokeColor(HexColor("#CCCCCC"))
             c.rect(qr_x, qr_y, qr_size, qr_size)
 
-    # Text "Ditandatangani secara elektronik" (Red)
-    c.setFont("Helvetica-Bold", 5.2)
+    # Verifier signature text (Right of QR code)
+    info_x = start_x + 40.0
+    c.setFont("Helvetica-Bold", 5.5)
     c.setFillColor(red_color)
-    c.drawCentredString(sig_center_x, qr_y - 6.0, "Ditandatangani secara elektronik")
+    c.drawString(info_x, sig_top_y - 8.0, "TANDA TANGAN VERIFIKATOR")
 
-    # Verifier Name & Signed Timestamp (Black)
-    c.setFont("Helvetica-Bold", 6.5)
-    c.setFillColor(black_color)
+    c.setFont("Helvetica-Bold", 5.0)
+    c.setFillColor(HexColor("#059669"))
+    c.drawString(info_x, sig_top_y - 14.0, "Ditandatangani secara elektronik")
+
     v_name = str(verf.verifier_name or "Verifikator")
-    if len(v_name) > 30:
-        v_name = v_name[:28] + "..."
-    c.drawCentredString(sig_center_x, qr_y - 13.0, v_name)
+    if len(v_name) > 32:
+        v_name = v_name[:30] + ".."
+    c.setFont("Helvetica-Bold", 5.8)
+    c.setFillColor(black_color)
+    c.drawString(info_x, sig_top_y - 21.0, v_name)
 
     if verf.verifier_signed_at:
-        c.setFont("Helvetica", 5.5)
+        c.setFont("Helvetica", 5.0)
         c.setFillColor(black_color)
-        c.drawCentredString(sig_center_x, qr_y - 20.0, str(verf.verifier_signed_at))
+        c.drawString(info_x, sig_top_y - 27.0, str(verf.verifier_signed_at))
 
 
 def stamp_pdf(
