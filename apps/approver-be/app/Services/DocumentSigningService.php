@@ -119,19 +119,40 @@ class DocumentSigningService
             $approvers = $approvers->sortBy('id')->values();
         }
 
+        // Muat seluruh approver lines (termasuk yang pending) untuk menghitung role_index berdasarkan urutan input (id ascending)
+        $allApproverLines = collect();
+        if (method_exists($document, 'approverLines')) {
+            $allApproverLines = $document->approverLines()->orderBy('id', 'asc')->get();
+        } elseif (method_exists($document, 'approvers')) {
+            $allApproverLines = $document->approvers()->orderBy('id', 'asc')->get();
+        }
+
         // Siapkan QR Code data URI untuk setiap approver yang approved
         $signedApprovers = [];
         foreach ($approvers as $line) {
             $verifyUrl = $this->buildVerifyUrl($documentType, $document->id, $line);
             $qrBase64 = $this->generateQrForApprover($documentType, $document->id, $line);
             
+            // Hitung role_index: indeks 0-based dari line ini di antara seluruh line dengan role yang sama pada dokumen
+            $sameRoleLines = $allApproverLines->filter(function ($l) use ($line) {
+                return strtolower(trim($l->role ?? '')) === strtolower(trim($line->role ?? ''));
+            })->values();
+
+            $roleIndex = $sameRoleLines->search(function ($l) use ($line) {
+                return $l->id === $line->id;
+            });
+            if ($roleIndex === false) {
+                $roleIndex = 0;
+            }
+
             $approverUser = $line->approver;
             $signedApprovers[] = [
-                'line_id'      => $line->id,
-                'role'         => str_replace('_', ' ', $line->role ?? 'Approver'),
-                'name'         => $approverUser->name ?? 'User #' . $line->approver_id,
-                'jabatan'      => $approverUser->role ?? $approverUser->unit_nama ?? 'Pejabat Berwenang',
-                'signed_at'    => $line->signed_at ? \Carbon\Carbon::parse($line->signed_at)->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') : now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i'),
+                'line_id'        => $line->id,
+                'role'           => str_replace('_', ' ', $line->role ?? 'Approver'),
+                'role_index'     => (int)$roleIndex,
+                'name'           => $approverUser->name ?? 'User #' . $line->approver_id,
+                'jabatan'        => $approverUser->role ?? $approverUser->unit_nama ?? 'Pejabat Berwenang',
+                'signed_at'      => $line->signed_at ? \Carbon\Carbon::parse($line->signed_at)->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') : now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i'),
                 'qr_code_base64' => $qrBase64,
                 'verify_url'     => $verifyUrl,
             ];
@@ -172,6 +193,7 @@ class DocumentSigningService
         $approversForStamper = array_map(function ($a) {
             return [
                 'role'       => $a['role'],
+                'role_index' => $a['role_index'] ?? 0,
                 'name'       => $a['name'],
                 'jabatan'    => $a['jabatan'],
                 'signed_at'  => $a['signed_at'],

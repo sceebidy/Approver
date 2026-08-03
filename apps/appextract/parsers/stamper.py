@@ -29,6 +29,7 @@ class ApproverStamp:
     jabatan: str
     signed_at: str
     verify_url: str
+    role_index: int = 0
 
 
 @dataclass
@@ -263,72 +264,48 @@ def _create_stamp_overlay(
     label_y = qr_y - gap - (label_font_size / 2.0)
 
     # Mapping for PPAB/PO/MIS approval roles to physical columns (0-indexed)
-    role_col_mapping = {
-        # PPAB
-        "pelaksanaan_disetujui_oleh": [0],
-        "pelaksanaan disetujui oleh": [0],
-        "diperiksa_oleh": [1, 2],
-        "diperiksa oleh": [1, 2],
-        "anggaran_disetujui_oleh": [3],
-        "anggaran disetujui oleh": [3],
-        "requestor": [0],
-        "checker": [1],
-        "issuer": [2],
-        "approver": [3, 4],
-
-        # PO
-        "accepted_by": [0],
-        "accepted by": [0],
-        "prepared_by": [1],
-        "prepared by": [1],
-        "checked_by": [2],
-        "checked by": [2],
-        "approved_by": [3],
-        "approved by": [3],
-
-        # MIS
-        "requested_received_by": [0],
-        "requested/receivedby": [0],
-        "requested received by": [0],
-        "issued_by": [2],
-        "issued by": [2],
-    }
+    if page_width > 700:
+        # PPAB / Landscape documents (4 columns: 0=pelaksanaan, 1=diperiksa #1, 2=diperiksa #2, 3=anggaran)
+        role_col_mapping = {
+            "pelaksanaan_disetujui_oleh": [0],
+            "pelaksanaan disetujui oleh": [0],
+            "diperiksa_oleh": [1, 2],
+            "diperiksa oleh": [1, 2],
+            "checked_by": [1, 2],
+            "checked by": [1, 2],
+            "anggaran_disetujui_oleh": [3],
+            "anggaran disetujui oleh": [3],
+            "requestor": [0],
+            "checker": [1],
+            "issuer": [2],
+            "approver": [3, 4],
+        }
+    else:
+        # PO / MIS / Portrait documents
+        role_col_mapping = {
+            "accepted_by": [0],
+            "accepted by": [0],
+            "prepared_by": [1],
+            "prepared by": [1],
+            "checked_by": [2],
+            "checked by": [2],
+            "approved_by": [3],
+            "approved by": [3],
+            "requested_received_by": [0],
+            "requested/receivedby": [0],
+            "requested received by": [0],
+            "issued_by": [2],
+            "issued by": [2],
+        }
     
     # Track how many people are in each physical column so we can stack if necessary
     col_occupancy = {}
     fallback_idx = 0
 
-    # Group approvers by role to detect under-filled roles
-    approvers_by_role = {}
-    for approver in approvers:
-        role_key = approver.role.lower().strip() if approver.role else ""
-        if role_key not in approvers_by_role:
-            approvers_by_role[role_key] = []
-        approvers_by_role[role_key].append(approver)
-        
     final_approvers = []
     for approver in approvers:
         role_key = approver.role.lower().strip() if approver.role else ""
-        
-        # If this is a recognized role, check if it needs duplication
-        if role_key in role_col_mapping:
-            allowed_cols = role_col_mapping[role_key]
-            # Find the index of this approver in their role group
-            # We process them sequentially
-            final_approvers.append((approver, role_key))
-            
-            # If this is the last approver in the group and we haven't filled all columns,
-            # duplicate this approver for the remaining columns.
-            group = approvers_by_role[role_key]
-            if approver is group[-1]:
-                # We reached the last provided approver for this role.
-                # Pad with copies of this approver until we fill allowed_cols
-                current_count = len(group)
-                while current_count < len(allowed_cols):
-                    final_approvers.append((approver, role_key))
-                    current_count += 1
-        else:
-            final_approvers.append((approver, role_key))
+        final_approvers.append((approver, role_key))
             
     role_counts = {}
 
@@ -355,9 +332,13 @@ def _create_stamp_overlay(
                     col_idx = po_v2_role_map.get(role_key, 2)
         elif role_key in role_col_mapping:
             allowed_cols = role_col_mapping[role_key]
-            count = role_counts.get(role_key, 0)
-            col_idx = allowed_cols[min(count, len(allowed_cols) - 1)]
-            role_counts[role_key] = count + 1
+            r_idx = getattr(approver, 'role_index', None)
+            if r_idx is not None and isinstance(r_idx, int) and 0 <= r_idx < len(allowed_cols):
+                col_idx = allowed_cols[r_idx]
+            else:
+                count = role_counts.get(role_key, 0)
+                col_idx = allowed_cols[min(count, len(allowed_cols) - 1)]
+                role_counts[role_key] = count + 1
         else:
             col_idx = fallback_idx % max(len(column_centers), 1)
             fallback_idx += 1

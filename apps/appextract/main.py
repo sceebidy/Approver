@@ -62,6 +62,7 @@ async def stamp_pdf_endpoint(
                         jabatan=a.get("jabatan", ""),
                         signed_at=a.get("signed_at", ""),
                         verify_url=a.get("verify_url", ""),
+                        role_index=int(a.get("role_index", 0)),
                     ))
         except json.JSONDecodeError as e:
             raise HTTPException(status_code=422, detail=f"approvers_json bukan JSON valid: {str(e)}")
