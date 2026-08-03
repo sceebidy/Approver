@@ -7,7 +7,17 @@ export function middleware(request: NextRequest) {
   // /sanctum/csrf-cookie harus bisa diakses sebelum login (publik)
   const isSanctumRoute = request.nextUrl.pathname.startsWith("/sanctum");
 
-  console.log(`[Middleware] Path: ${request.nextUrl.pathname} | Token present: ${!!token} (${token || 'NONE'})`);
+  const hasSsoToken = request.nextUrl.searchParams.has("token");
+
+  console.log(`[Middleware] Path: ${request.nextUrl.pathname} | Token present: ${!!token} (${token || 'NONE'}) | Has SSO Query Token: ${hasSsoToken}`);
+
+  // Jika URL membawa query param token (misal redirect dari Portal ke /?token=...), Arahkan ke /sso/verify
+  if (hasSsoToken && !isSsoVerifyRoute) {
+    const ssoUrl = new URL("/sso/verify", request.url);
+    ssoUrl.search = request.nextUrl.search;
+    console.log(`[Middleware] SSO token detected in query. Redirecting to: ${ssoUrl.toString()}`);
+    return NextResponse.redirect(ssoUrl);
+  }
 
   if (!token && !isSsoVerifyRoute && !isSanctumRoute) {
     const portalUrl = process.env.NEXT_PUBLIC_PORTAL_LOGIN_URL || "https://portal.inl.co.id";

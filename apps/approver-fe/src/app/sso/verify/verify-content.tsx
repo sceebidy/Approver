@@ -30,7 +30,8 @@ export default function SSOVerifyContent() {
       }
 
       try {
-        const appId = process.env.NEXT_PUBLIC_APP_ID;
+        const urlAppId = searchParams.get('appId') || urlParams.get('appId');
+        const appId = urlAppId || process.env.NEXT_PUBLIC_APP_ID;
         const apiUrl = "/api";
 
         // 1. Get CSRF cookie and initialize session

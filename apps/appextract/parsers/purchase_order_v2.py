@@ -95,6 +95,7 @@ def parse(text: str) -> dict:
 
     vendor_nama = data.get("vendor_nama") or "SIGMA CIPTA CARAKA"
     data["approval_roles"] = {
+        "accepted_by": vendor_nama,
         "approved_by": ""
     }
 

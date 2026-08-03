@@ -672,6 +672,18 @@ function EditableValue({
     );
   }
 
+  if (fieldKey?.toLowerCase().includes("accept")) {
+    return (
+      <input
+        type="text"
+        value={typeof value === 'string' ? value : (value?.nama || value?.name || '')}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full text-xs font-medium text-slate-800 bg-white border border-[#E3E6EA] rounded-lg px-3 py-2 focus:outline-none focus:border-[#1F3A5F] focus:ring-1 focus:ring-[#1F3A5F] transition-all"
+        placeholder="Nama Vendor / Supplier"
+      />
+    );
+  }
+
   if (inApprovalRoles || (fieldKey ? isApproverFieldKey(fieldKey) : false)) {
     // Pastikan value selalu berupa array agar bisa multi-select
     const arr = Array.isArray(value) ? value : [value];

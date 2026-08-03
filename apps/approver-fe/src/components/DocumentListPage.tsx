@@ -254,7 +254,7 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
                       <StatusBadge status={r.status ?? 'pending'} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      {r.status === 'approved' ? (
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -265,20 +265,20 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
                         >
                           <FileText size={14} /> Lihat PDF
                         </button>
-                      ) : onDelete && r.can_cancel !== false ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteError(null);
-                            setDeletingRow(r);
-                          }}
-                          className="px-3 py-1.5 text-[12px] font-medium text-red-600 bg-white hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-                        >
-                          Batalkan
-                        </button>
-                      ) : (
-                        <span className="text-[12.5px] text-gray-400 font-medium">-</span>
-                      )}
+
+                        {onDelete && r.can_cancel !== false && r.status !== 'approved' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteError(null);
+                              setDeletingRow(r);
+                            }}
+                            className="px-3 py-1.5 text-[12px] font-medium text-red-600 bg-white hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                          >
+                            Batalkan
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

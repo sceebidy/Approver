@@ -15,7 +15,7 @@ class AddSourcePdfPathToMisTable extends Migration
     {
         if (Schema::hasTable('mis') && !Schema::hasColumn('mis', 'source_pdf_path')) {
             Schema::table('mis', function (Blueprint $table) {
-                $table->string('source_pdf_path')->nullable();
+                $table->string('source_pdf_path')->nullable()->after('nomor_mis');
             });
         }
     }

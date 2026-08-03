@@ -147,31 +147,8 @@ class DocumentSigningController extends Controller
             }
         }
 
-        // Jika belum ada, cek apakah semua approval sudah approved
+        // Jika file PDF bertanda tangan/ter-stamp belum di-cache, generate PDF (sesuai status stamp saat ini)
         if (!$filePath) {
-            $approverLines = collect();
-            if ($documentType === 'fs' || $documentType === 'fr') {
-                $approverLines = $document->approvers;
-            } elseif (method_exists($document, 'approverLines')) {
-                $approverLines = $document->approverLines;
-            }
-
-            if ($approverLines->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Dokumen belum memiliki persetujuan (approver line).'
-                ], 400);
-            }
-
-            $pendingCount = $approverLines->where('status', '!=', 'approved')->count();
-            if ($pendingCount > 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'PDF resmi belum tersedia. Dokumen belum disetujui oleh semua approver.'
-                ], 404);
-            }
-
-            // Generate PDF baru
             $filePath = $this->signingService->generateSignedPdf($documentType, $document);
         }
 
