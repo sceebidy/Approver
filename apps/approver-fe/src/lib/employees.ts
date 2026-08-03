@@ -262,8 +262,11 @@ export function isApproverFieldKey(key: string): boolean {
     k.includes("approv") ||
     k.includes("prepared") ||
     k.includes("checked") ||
+    k.includes("checker") ||
+    k.includes("issuer") ||
     k.includes("issued") ||
     k.includes("requested") ||
+    k.includes("requestor") ||
     k.includes("received") ||
     k.includes("menyetujui") ||
     k.includes("disetujui") ||

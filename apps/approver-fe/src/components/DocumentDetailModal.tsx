@@ -346,9 +346,9 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                             window.open(`${apiUrl}/ppab/${data.id}/preview-pdf`, '_blank');
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-[12px] font-semibold rounded-md transition-all shadow-xs"
-                          title="Lihat Pratinjau PDF Asli dengan Stamp Merah Verifikasi Anggaran"
+                          title="Pratinjau PDF Asli dengan Stamp Verifikasi Anggaran"
                         >
-                          <FileText size={13} /> Cek PDF (Stamp Merah)
+                          <FileText size={13} /> Pratinjau PDF (Verifikasi Anggaran)
                         </button>
                       )}
                       {(userPendingLines.length > 0 || actualApprovers.some((l: any) => l.approver_id === data?.current_user_id)) && (

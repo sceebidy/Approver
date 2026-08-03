@@ -149,7 +149,18 @@ def _detect_signature_boxes_from_pdf(source_pdf_bytes: bytes, page_idx: int = -1
                         if not unique_x or abs(vl['x0'] - unique_x[-1]) > 5:
                             unique_x.append(vl['x0'])
                             
-                    if len(unique_x) >= 2:
+                    if len(unique_x) == 5:
+                        # 4 main boxes in MIS (Requested/Received, Checked, Issued, Approved By).
+                        # Split wide Approved By box (unique_x[3] to unique_x[4]) into 2 slots for Approver 1 & 2.
+                        c0 = (unique_x[0] + unique_x[1]) / 2.0
+                        c1 = (unique_x[1] + unique_x[2]) / 2.0
+                        c2 = (unique_x[2] + unique_x[3]) / 2.0
+                        appr_w = unique_x[4] - unique_x[3]
+                        c3 = unique_x[3] + (appr_w * 0.25)
+                        c4 = unique_x[3] + (appr_w * 0.75)
+                        column_centers = [c0, c1, c2, c3, c4]
+                        return column_centers, box_top_y, box_bottom_y
+                    elif len(unique_x) >= 2:
                         column_centers = [(unique_x[i] + unique_x[i+1]) / 2.0 for i in range(len(unique_x) - 1)]
                         return column_centers, box_top_y, box_bottom_y
                     
@@ -283,19 +294,26 @@ def _create_stamp_overlay(
     else:
         # PO / MIS / Portrait documents
         role_col_mapping = {
-            "accepted_by": [0],
-            "accepted by": [0],
-            "prepared_by": [1],
-            "prepared by": [1],
-            "checked_by": [2],
-            "checked by": [2],
-            "approved_by": [3],
-            "approved by": [3],
+            "requestor": [0],
             "requested_received_by": [0],
             "requested/receivedby": [0],
             "requested received by": [0],
+            "checker": [1],
+            "checkedby": [1],
+            "prepared_by": [1],
+            "prepared by": [1],
+            "issuer": [2],
             "issued_by": [2],
+            "issuedby": [2],
             "issued by": [2],
+            "checked_by": [2],
+            "checked by": [2],
+            "approver": [3, 4],
+            "approved_by": [3, 4],
+            "approvedby": [3, 4],
+            "approved by": [3, 4],
+            "accepted_by": [0],
+            "accepted by": [0],
         }
     
     # Track how many people are in each physical column so we can stack if necessary
@@ -346,7 +364,7 @@ def _create_stamp_overlay(
         if col_idx < len(column_centers):
             col_center_x = column_centers[col_idx]
         else:
-            col_center_x = column_centers[-1] + 100
+            col_center_x = column_centers[-1]
 
         # Check occupancy to offset Y if multiple people share the same column
         occupancy = col_occupancy.get(col_idx, 0)

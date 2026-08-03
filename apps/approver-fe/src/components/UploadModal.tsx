@@ -672,7 +672,7 @@ function EditableValue({
     );
   }
 
-  if (fieldKey ? isApproverFieldKey(fieldKey) : inApprovalRoles) {
+  if (inApprovalRoles || (fieldKey ? isApproverFieldKey(fieldKey) : false)) {
     // Pastikan value selalu berupa array agar bisa multi-select
     const arr = Array.isArray(value) ? value : [value];
 
