@@ -31,13 +31,34 @@ class DocumentSigningService
     }
 
     /**
+     * Get base App URL dynamically.
+     * If APP_URL in env is empty or set to localhost, fallback to current HTTP request host.
+     */
+    public function getAppUrl(): string
+    {
+        $configuredUrl = rtrim(config('app.url', ''), '/');
+
+        // Check if configured URL contains localhost or 127.0.0.1
+        if (empty($configuredUrl) || Str::contains($configuredUrl, ['localhost', '127.0.0.1'])) {
+            if (!app()->runningInConsole() && request()) {
+                $requestUrl = rtrim(request()->schemeAndHttpHost(), '/');
+                if (!empty($requestUrl)) {
+                    return $requestUrl;
+                }
+            }
+        }
+
+        return $configuredUrl ?: 'http://127.0.0.1:8000';
+    }
+
+    /**
      * Generate QR Code sebagai Base64 SVG Image Data URI untuk digunakan di DomPDF HTML.
      */
     public function generateQrForApprover(string $documentType, $documentId, $approverLine): string
     {
         $token = $this->generateVerifyToken($approverLine);
         
-        $appUrl = rtrim(config('app.url', 'http://127.0.0.1:8000'), '/');
+        $appUrl = $this->getAppUrl();
         $verifyUrl = "{$appUrl}/verify/{$documentType}/{$documentId}/{$approverLine->id}?token={$token}";
 
         // Generate SVG string using SimpleQrCode
@@ -57,7 +78,7 @@ class DocumentSigningService
     public function buildVerifyUrl(string $documentType, $documentId, $approverLine): string
     {
         $token = $this->generateVerifyToken($approverLine);
-        $appUrl = rtrim(config('app.url', 'http://127.0.0.1:8000'), '/');
+        $appUrl = $this->getAppUrl();
         return "{$appUrl}/verify/{$documentType}/{$documentId}/{$approverLine->id}?token={$token}";
     }
 
@@ -219,7 +240,7 @@ class DocumentSigningService
                     'sisa_anggaran'       => (float)($verf->sisa_anggaran ?? 0),
                     'verifier_name'       => $document->user->name ?? 'Verifikator Anggaran',
                     'verifier_signed_at' => $verf->updated_at ? $verf->updated_at->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') : now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i'),
-                    'verify_url'          => rtrim(config('app.url', 'http://127.0.0.1:8000'), '/') . "/verify/ppab/{$document->id}/verf",
+                    'verify_url'          => $this->getAppUrl() . "/verify/ppab/{$document->id}/verf",
                 ];
             }
         }

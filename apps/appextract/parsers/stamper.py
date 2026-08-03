@@ -393,7 +393,7 @@ def _create_stamp_overlay(
         
         # -- Teks "Ditandatangani secara elektronik" --
         c.setFont("Helvetica", label_font_size)
-        c.setFillColor(HexColor("#059669"))
+        c.setFillColor(HexColor("#6B7280"))
         c.drawCentredString(col_center_x, current_label_y, "Ditandatangani secara elektronik")
     
     # If budget verification stamp is provided, draw red stamp table below signature boxes
@@ -532,7 +532,7 @@ def _draw_verf_anggaran_red_stamp(
     c.drawString(info_x, sig_top_y - 8.0, "TANDA TANGAN VERIFIKATOR")
 
     c.setFont("Helvetica-Bold", 5.0)
-    c.setFillColor(HexColor("#059669"))
+    c.setFillColor(HexColor("#6B7280"))
     c.drawString(info_x, sig_top_y - 14.0, "Ditandatangani secara elektronik")
 
     v_name = str(verf.verifier_name or "Verifikator")

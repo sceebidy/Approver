@@ -190,7 +190,7 @@
         }
         .digital-sig-text {
             font-size: 7.5px;
-            color: #000000;
+            color: #6b7280;
             font-style: italic;
             margin-top: 2px;
         }
