@@ -1,3 +1,5 @@
+const BACKEND_URL = process.env.BACKEND_URL || "http://127.0.0.1:8000";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -5,13 +7,13 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://127.0.0.1:8000/api/:path*",
+        destination: `${BACKEND_URL}/api/:path*`,
       },
       // Proxy /sanctum/csrf-cookie agar browser melihatnya sebagai same-origin
-      // (localhost:3000 → 127.0.0.1:8000), sehingga cookie XSRF-TOKEN ter-set dengan benar
+      // sehingga cookie XSRF-TOKEN ter-set dengan benar
       {
         source: "/sanctum/:path*",
-        destination: "http://127.0.0.1:8000/sanctum/:path*",
+        destination: `${BACKEND_URL}/sanctum/:path*`,
       },
     ];
   },

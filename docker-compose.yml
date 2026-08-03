@@ -26,6 +26,7 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - BACKEND_URL=http://approval-be
     env_file:
       - ./apps/approver-fe/.env.local
     ports:
