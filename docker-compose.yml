@@ -23,6 +23,8 @@ services:
     build:
       context: ./apps/approver-fe
       dockerfile: Dockerfile
+      args:
+        BACKEND_URL: http://approval-be
     container_name: approver_fe
     restart: unless-stopped
     environment:
