@@ -20,7 +20,7 @@ class AuthController extends Controller
             'appId'    => 'required|string',
         ]);
 
-        $portalUrl = env('PORTAL_API_URL');
+        $portalUrl = rtrim(env('PORTAL_API_URL'), '/');
         
         try {
             // Call Portal SSO Verify
@@ -30,10 +30,17 @@ class AuthController extends Controller
             ]);
 
             if ($response->failed()) {
-                Log::error('SSO Verify Failed', ['response' => $response->body()]);
+                Log::error('SSO Verify Failed', [
+                    'url'      => "{$portalUrl}/api/sso/verify",
+                    'status'   => $response->status(),
+                    'response' => $response->body(),
+                    'app_id'   => $request->appId,
+                ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'SSO Token invalid or expired.'
+                    'message' => 'SSO Token invalid or expired.',
+                    'portal_status' => $response->status(),
+                    'portal_response' => $response->json() ?? $response->body()
                 ], 401);
             }
 
