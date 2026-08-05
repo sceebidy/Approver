@@ -201,6 +201,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
   const [sourcePdfPath, setSourcePdfPath] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [selectedVerifierKey, setSelectedVerifierKey] = useState<string | null>(null);
   const unsupportedFieldKeys = new Set(['required_for', 'time', 'section']);
 
   useEffect(() => {
@@ -234,6 +235,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       setSubmitting(false);
       setSourcePdfPath(null);
       setShowPreview(false);
+      setSelectedVerifierKey(null);
     }
   }, [isOpen]);
 
@@ -247,6 +249,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
     setEditableResult(null);
     setSourcePdfPath(null);
     setShowPreview(false);
+    setSelectedVerifierKey(null);
   }, [file]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -296,6 +299,17 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       if (data?.source_pdf_path) {
         setSourcePdfPath(data.source_pdf_path);
       }
+
+      // Default selectedVerifierKey ke approver PERTAMA yang terdeteksi
+      const firstApprovers = collectApproversFromData(extracted as Record<string, unknown>);
+      if (firstApprovers.length > 0) {
+        const first = firstApprovers[0];
+        const roleKey = (first.role || '').toLowerCase();
+        const empId = first.employee_id || first.employeeId || first.id || '';
+        if (empId) {
+          setSelectedVerifierKey(`${roleKey}:${empId}`);
+        }
+      }
     } catch (error) {
       setStatus(`Error koneksi: ${String(error)}`);
       setErrorMessage(`Error koneksi: ${String(error)}`);
@@ -310,17 +324,38 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       return;
     }
 
-    const approvers = collectApproversFromData(editableResult as Record<string, unknown>);
-    if (approvers.length === 0) {
-      setStatus("Pilih minimal satu approver dari field seperti Prepared By / Checked By / Approved By.");
-      return;
-    }
-
     let type = docType;
     if (!type) {
       if (editableResult.nomor_ppab || editableResult.nomorPpab) type = "ppab";
       else if (editableResult.nomor_po || editableResult.nomorPo) type = "po";
       else type = "mis";
+    }
+
+    const rawApprovers = collectApproversFromData(editableResult as Record<string, unknown>);
+    if (rawApprovers.length === 0) {
+      setStatus("Pilih minimal satu approver dari field seperti Prepared By / Checked By / Approved By.");
+      return;
+    }
+
+    const approvers = rawApprovers.map((appr) => {
+      let isVerifier = false;
+      if (type === 'ppab') {
+        const roleKey = (appr.role || '').toLowerCase();
+        const empId = appr.employee_id || appr.employeeId || appr.id || '';
+        const uniqueKey = `${roleKey}:${empId}`;
+        
+        isVerifier = selectedVerifierKey === uniqueKey;
+      }
+      return {
+        ...appr,
+        is_verifier: isVerifier,
+      };
+    });
+
+    if (type === 'ppab' && !approvers.some(a => a.is_verifier)) {
+      setStatus("Wajib memilih salah satu approver sebagai Verifikator Anggaran.");
+      setErrorMessage("Silakan pilih salah satu approver sebagai Verifikator Anggaran terlebih dahulu.");
+      return;
     }
 
     setSubmitting(true);
@@ -535,7 +570,14 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
                 )}
               </div>
               <div className="p-6">
-                <EditableResultView value={editableResult} onChange={setEditableResult} unsupportedKeys={unsupportedFieldKeys} />
+                <EditableResultView
+                  value={editableResult}
+                  onChange={setEditableResult}
+                  unsupportedKeys={unsupportedFieldKeys}
+                  docType={docType || (editableResult?.nomor_ppab ? 'ppab' : (editableResult?.nomor_po ? 'po' : 'mis'))}
+                  selectedVerifierKey={selectedVerifierKey}
+                  onSelectVerifier={setSelectedVerifierKey}
+                />
               </div>
             </div>
           ) : null}
@@ -598,7 +640,21 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
   );
 }
 
-function EditableResultView({ value, onChange, unsupportedKeys }: { value: any; onChange: (v: any) => void; unsupportedKeys: Set<string> }) {
+function EditableResultView({
+  value,
+  onChange,
+  unsupportedKeys,
+  docType,
+  selectedVerifierKey,
+  onSelectVerifier,
+}: {
+  value: any;
+  onChange: (v: any) => void;
+  unsupportedKeys: Set<string>;
+  docType?: string;
+  selectedVerifierKey?: string | null;
+  onSelectVerifier?: (key: string) => void;
+}) {
   const [local, setLocal] = useState<any>(value ?? null);
 
   useEffect(() => setLocal(value ?? null), [value]);
@@ -621,6 +677,9 @@ function EditableResultView({ value, onChange, unsupportedKeys }: { value: any; 
               <EditableValue
                 fieldKey={k}
                 value={local[k]}
+                docType={docType}
+                selectedVerifierKey={selectedVerifierKey}
+                onSelectVerifier={onSelectVerifier}
                 onChange={(nv) => {
                   const next = { ...local, [k]: nv };
                   setLocal(next);
@@ -642,11 +701,17 @@ function EditableValue({
   value,
   onChange,
   inApprovalRoles = false,
+  docType,
+  selectedVerifierKey,
+  onSelectVerifier,
 }: {
   fieldKey?: string;
   value: any;
   onChange: (v: any) => void;
   inApprovalRoles?: boolean;
+  docType?: string;
+  selectedVerifierKey?: string | null;
+  onSelectVerifier?: (key: string) => void;
 }) {
   const isMoney = isMoneyField(fieldKey);
 
@@ -663,6 +728,9 @@ function EditableValue({
                 fieldKey={roleKey}
                 value={roleValue}
                 inApprovalRoles
+                docType={docType}
+                selectedVerifierKey={selectedVerifierKey}
+                onSelectVerifier={onSelectVerifier}
                 onChange={(nv) => onChange({ ...value, [roleKey]: nv })}
               />
             </div>
@@ -687,39 +755,77 @@ function EditableValue({
   if (inApprovalRoles || (fieldKey ? isApproverFieldKey(fieldKey) : false)) {
     // Pastikan value selalu berupa array agar bisa multi-select
     const arr = Array.isArray(value) ? value : [value];
+    const isPpab = docType === 'ppab';
 
     return (
       <div className="space-y-2">
-        {arr.map((val, idx) => (
-          <div key={idx} className="flex items-start gap-2">
-            <div className="flex-1 relative min-w-0">
-              <SsoUserPicker
-                value={val}
-                onChange={(nv) => {
-                  const newArr = [...arr];
-                  newArr[idx] = nv;
-                  // Jika hanya 1 item dan dihapus (kosong), tetap biarkan sebagai array atau string kosong
-                  // agar collectApprovers bisa memprosesnya
-                  onChange(newArr);
-                }}
-                placeholder={`Pilih ${formatApproverFieldLabel(fieldKey || "")}`}
-              />
+        {arr.map((val, idx) => {
+          const empId = typeof val === 'object' && val ? (val.employeeId || val.employee_id || val.id) : (typeof val === 'string' ? val : '');
+          const roleKey = (fieldKey || 'approver').toLowerCase();
+          const apprKey = empId ? `${roleKey}:${empId}` : `${roleKey}:${idx}`;
+
+          const isVerifierSelected = Boolean(selectedVerifierKey && selectedVerifierKey === apprKey);
+
+          return (
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2.5 my-1">
+              <div className="flex-1 relative min-w-0">
+                <SsoUserPicker
+                  value={val}
+                  onChange={(nv) => {
+                    const newArr = [...arr];
+                    newArr[idx] = nv;
+                    onChange(newArr);
+
+                    // Auto select this approver as verifier if none selected yet
+                    if (nv && typeof nv === 'object') {
+                      const newEmpId = (nv as any).employeeId || (nv as any).employee_id || (nv as any).id;
+                      if (newEmpId && !selectedVerifierKey) {
+                        onSelectVerifier?.(`${roleKey}:${newEmpId}`);
+                      }
+                    }
+                  }}
+                  placeholder={`Pilih ${formatApproverFieldLabel(fieldKey || "")}`}
+                />
+              </div>
+
+              {isPpab && onSelectVerifier && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (apprKey) onSelectVerifier(apprKey);
+                  }}
+                  className={`inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition-all border shrink-0 sm:w-44 select-none cursor-pointer ${
+                    isVerifierSelected
+                      ? 'bg-[#1F3A5F] text-white border-[#1F3A5F] shadow-sm ring-2 ring-[#1F3A5F]/20 font-bold'
+                      : 'bg-white text-slate-600 border-[#E3E6EA] hover:bg-slate-50 hover:border-slate-300'
+                  }`}
+                  title="Tandai sebagai Verifikator Anggaran untuk PPAB ini"
+                >
+                  <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                    isVerifierSelected ? 'border-white bg-white' : 'border-slate-400 bg-white'
+                  }`}>
+                    {isVerifierSelected && <span className="w-2 h-2 rounded-full bg-[#1F3A5F]" />}
+                  </span>
+                  <span className="truncate">Verifikator Anggaran</span>
+                </button>
+              )}
+
+              {arr.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newArr = arr.filter((_, i) => i !== idx);
+                    onChange(newArr);
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                  title="Hapus approver"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
-            {arr.length > 1 && (
-              <button
-                type="button"
-                onClick={() => {
-                  const newArr = arr.filter((_, i) => i !== idx);
-                  onChange(newArr);
-                }}
-                className="mt-1 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                title="Hapus approver"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
         <button
           type="button"
           onClick={() => onChange([...arr, ""])}

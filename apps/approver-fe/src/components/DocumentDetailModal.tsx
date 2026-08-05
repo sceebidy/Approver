@@ -13,6 +13,7 @@ interface ApproverLine {
   timestamp: string | null;
   signed_at?: string | null;
   updated_at?: string | null;
+  is_verifier?: boolean;
   approver: {
     id: number;
     name: string;
@@ -23,6 +24,8 @@ interface DocDetail {
   id: number;
   request_type: string;
   can_cancel: boolean;
+  can_edit_verf_anggaran?: boolean;
+  verifier_name?: string | null;
   user?: { name: string };
   user_name?: string;
   created_at: string;
@@ -351,7 +354,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                           <FileText size={13} /> Pratinjau PDF (Verifikasi Anggaran)
                         </button>
                       )}
-                      {(userPendingLines.length > 0 || actualApprovers.some((l: any) => l.approver_id === data?.current_user_id)) && (
+                      {data?.can_edit_verf_anggaran && (
                         <button
                           onClick={() => setIsVerfModalOpen(true)}
                           className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#1F3A5F] hover:bg-[#152843] text-white text-[12px] font-semibold rounded-md transition-all shadow-xs"
@@ -414,8 +417,14 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                     })()
                   ) : (
                     <div className="p-4 text-center bg-slate-50/50">
-                      <p className="text-xs text-slate-500 mb-2">Belum ada data Verifikasi Anggaran yang diisi untuk pengajuan PPAB ini.</p>
-                      {(userPendingLines.length > 0 || actualApprovers.some((l: any) => l.approver_id === data?.current_user_id)) && (
+                      <p className="text-xs text-slate-500 mb-2">
+                        {data?.can_edit_verf_anggaran
+                          ? "Belum ada data Verifikasi Anggaran yang diisi untuk pengajuan PPAB ini."
+                          : data?.verifier_name
+                            ? `Verifikasi Anggaran hanya dapat diisi oleh Verifikator Anggaran (${data.verifier_name}).`
+                            : "Hanya Verifikator Anggaran yang ditunjuk yang dapat mengisi bagian ini."}
+                      </p>
+                      {data?.can_edit_verf_anggaran && (
                         <button
                           onClick={() => setIsVerfModalOpen(true)}
                           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1F3A5F] hover:bg-[#152843] text-white text-xs font-semibold rounded-md transition-all shadow-xs"
@@ -673,8 +682,13 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                                 <h5 className="text-[14px] font-semibold text-[#111827]">
                                   {line.approver?.name || `User #${line.approver_id}`}
                                 </h5>
-                                <p className="text-[12px] text-[#6B7280] uppercase tracking-wider font-medium mt-0.5 flex items-center gap-1.5">
+                                <p className="text-[12px] text-[#6B7280] uppercase tracking-wider font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
                                   {line.role ? line.role.replace(/_/g, ' ') : 'APPROVER'}
+                                  {line.is_verifier && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded normal-case tracking-normal">
+                                      ★ Verifikator Anggaran
+                                    </span>
+                                  )}
                                   {(isUserPending || (line.approver_id === data?.current_user_id && (isApproved || isRejected))) && (
                                     <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 rounded normal-case tracking-normal">
                                       (Anda)
@@ -685,9 +699,9 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                               {/* Kanan: tombol aksi (jika user pending) atau badge status */}
                               <div className="flex items-center gap-2 shrink-0 sm:flex-col sm:items-end sm:gap-1">
                                 {isUserPending ? (
-                                  /* Ganti badge Pending dengan 3 tombol aksi jika PPAB */
+                                  /* Ganti badge Pending dengan tombol aksi jika PPAB */
                                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                                    {docType === 'ppab' && (
+                                    {docType === 'ppab' && data?.can_edit_verf_anggaran && (
                                       <button
                                         onClick={() => setIsVerfModalOpen(true)}
                                         className="flex items-center gap-1 px-2.5 py-1 bg-[#1F3A5F] text-white text-[11px] font-semibold rounded-md hover:bg-[#152843] active:scale-95 transition-all shadow-sm"

@@ -101,7 +101,8 @@ class SubmissionController extends Controller
                     $ppab->approverLines()->create([
                         'approver_id' => $approver->id,
                         'role' => $approverData['role'] ?? 'approver',
-                        'status' => 'pending'
+                        'status' => 'pending',
+                        'is_verifier' => !empty($approverData['is_verifier']) ? true : false,
                     ]);
                 }
             } elseif ($type === 'po') {

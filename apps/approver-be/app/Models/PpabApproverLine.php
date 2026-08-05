@@ -16,11 +16,13 @@ class PpabApproverLine extends Model
         'approver_id',
         'role',
         'status',
-        'timestamp'
+        'timestamp',
+        'is_verifier',
     ];
 
     protected $casts = [
         'timestamp' => 'datetime',
+        'is_verifier' => 'boolean',
     ];
 
     public function ppab()

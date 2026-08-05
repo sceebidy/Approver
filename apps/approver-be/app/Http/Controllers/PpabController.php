@@ -79,6 +79,7 @@ class PpabController extends Controller
             'approver_lines.*.role' => 'nullable|string|max:255',
             'approver_lines.*.status' => 'nullable|string|in:pending,approved,rejected',
             'approver_lines.*.timestamp' => 'nullable|date',
+            'approver_lines.*.is_verifier' => 'nullable|boolean',
         ]);
 
         $userId = auth()->id() ?? ($data['user_id'] ?? null);
@@ -131,6 +132,7 @@ class PpabController extends Controller
                         'role' => $line['role'] ?? 'approver',
                         'status' => $line['status'] ?? 'pending',
                         'timestamp' => $line['timestamp'] ?? null,
+                        'is_verifier' => !empty($line['is_verifier']) ? true : false,
                     ]);
                 }
             }
@@ -160,8 +162,20 @@ class PpabController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
         }
 
+        $hasVerifierDesignated = $ppab->approverLines->contains('is_verifier', true);
+        if ($hasVerifierDesignated) {
+            $isDesignatedVerifier = $ppab->approverLines->contains(fn($l) => $l->is_verifier && in_array($l->approver_id, $userIds));
+        } else {
+            // Legacy fallback if no verifier was explicitly assigned
+            $isDesignatedVerifier = $isOwner || $isApprover;
+        }
+
+        $verifierLine = $ppab->approverLines->firstWhere('is_verifier', true);
+
         $ppab->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $ppab->can_cancel = !$ppab->approverLines->contains('status', 'approved');
+        $ppab->can_edit_verf_anggaran = $isDesignatedVerifier || strtolower($user->role ?? '') === 'super_admin';
+        $ppab->verifier_name = $verifierLine?->approver?->name ?? null;
         $ppab->current_user_id = $user->id;
         $ppab->current_user_ids = $userIds;
 
@@ -176,11 +190,24 @@ class PpabController extends Controller
         $ppab = Ppab::with('approverLines')->findOrFail($id);
         $user = auth()->user();
 
-        $isOwner = $ppab->user_id === $user->id;
-        $isApprover = $ppab->approverLines->contains('approver_id', $user->id);
+        $userIds = [$user->id];
+        if (!empty($user->employee_id)) {
+            $userIds = array_unique(array_merge($userIds, User::where('employee_id', $user->employee_id)->pluck('id')->toArray()));
+        }
 
-        if (!$isOwner && !$isApprover && $user->role !== 'super_admin') {
-            return response()->json(['success' => false, 'message' => 'Unauthorized access.'], 403);
+        $hasVerifierDesignated = $ppab->approverLines->contains('is_verifier', true);
+        if ($hasVerifierDesignated) {
+            $isAllowedVerifier = $ppab->approverLines->contains(fn($l) => $l->is_verifier && in_array($l->approver_id, $userIds));
+        } else {
+            // Legacy fallback
+            $isAllowedVerifier = $ppab->user_id === $user->id || $ppab->approverLines->contains(fn($l) => in_array($l->approver_id, $userIds));
+        }
+
+        if (!$isAllowedVerifier && strtolower($user->role ?? '') !== 'super_admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak: Hanya Verifikator Anggaran yang ditunjuk yang dapat mengisi/mengubah Verifikasi Anggaran.'
+            ], 403);
         }
 
         $validated = $request->validate([
