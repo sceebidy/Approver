@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShieldAlert, ShieldCheck, Loader2, Settings, Percent, ArrowRight } from "lucide-react";
+import { ShieldAlert, Loader2, ArrowRight } from "lucide-react";
 
 export default function AdminControlPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
-  // 1. Verify User Authentication & Role ('super_admin' or 'admin')
+  // Verify User Authentication & Role ('super_admin' or 'admin')
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -50,7 +50,7 @@ export default function AdminControlPage() {
   // Render Loading Auth State
   if (loadingAuth) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+      <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
         <Loader2 className="w-8 h-8 text-[#1F3A5F] animate-spin" />
         <p className="text-sm text-gray-500">Memeriksa hak akses Admin...</p>
       </div>
@@ -75,74 +75,73 @@ export default function AdminControlPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4 space-y-8">
+    <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
       {/* Page Header */}
-      <div className="border-b border-gray-200 pb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-[#1F3A5F]/10 text-[#1F3A5F] rounded-xl">
-            <Settings size={28} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Control</h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Pusat konfigurasi sistem dan manajemen fungsi administratif
-            </p>
-          </div>
-        </div>
+      <div className="border-b border-gray-200 pb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Admin Control</h1>
+        <p className="text-xs text-gray-500 mt-1">
+          Pusat konfigurasi sistem dan manajemen fungsi administratif
+        </p>
       </div>
 
-      {/* 2 Main Function Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Tombol 1: Semua Request */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all p-6 flex flex-col justify-between group">
-          <div className="space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ShieldCheck size={26} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                Semua Request
-              </h2>
-              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-                Pantau, cari, filter, dan telusuri seluruh pengajuan dokumen transaksi (PPAB, PO, MIS, FR, FS) dari semua pengguna.
-              </p>
-            </div>
+      {/* 3 Clean Single-Color Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Card 1: Semua Request */}
+        <div className="bg-white rounded-xl border border-gray-200 hover:border-[#1F3A5F] transition-all p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Semua Request</h2>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Pantau, cari, dan telusuri seluruh pengajuan transaksi (PPAB, PO, MIS, FR, FS) dari semua pengguna.
+            </p>
           </div>
 
-          <div className="pt-6 mt-6 border-t border-gray-100">
+          <div className="pt-4 border-t border-gray-100">
             <Link
               href="/admin/requests"
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#1F3A5F] text-white text-xs font-semibold rounded-xl hover:bg-[#142640] transition shadow-xs group-hover:bg-blue-600"
+              className="w-full inline-flex items-center justify-between px-3.5 py-2.5 bg-[#1F3A5F] text-white text-xs font-semibold rounded-lg hover:bg-[#142640] transition cursor-pointer"
             >
               <span>Buka Semua Request</span>
-              <ArrowRight size={16} />
+              <ArrowRight size={14} />
             </Link>
           </div>
         </div>
 
-        {/* Tombol 2: Pengaturan Pajak */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all p-6 flex flex-col justify-between group">
-          <div className="space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Percent size={26} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                Pengaturan Pajak
-              </h2>
-              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-                Kelola jenis dan persentase tarif pajak (PPN / PPh) yang digunakan untuk pemotongan/penambahan pada form Fund Request (FR).
-              </p>
-            </div>
+        {/* Card 2: Kategori Fund Control */}
+        <div className="bg-white rounded-xl border border-gray-200 hover:border-[#1F3A5F] transition-all p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Kategori Fund Control</h2>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Kelola dan buat jenis-jenis kategori pengajuan dana yang digunakan pada modul upload/pengajuan FR.
+            </p>
           </div>
 
-          <div className="pt-6 mt-6 border-t border-gray-100">
+          <div className="pt-4 border-t border-gray-100">
+            <Link
+              href="/admin/kategori-fr"
+              className="w-full inline-flex items-center justify-between px-3.5 py-2.5 bg-[#1F3A5F] text-white text-xs font-semibold rounded-lg hover:bg-[#142640] transition cursor-pointer"
+            >
+              <span>Kelola Kategori FR</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Card 3: Pengaturan Pajak */}
+        <div className="bg-white rounded-xl border border-gray-200 hover:border-[#1F3A5F] transition-all p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Pengaturan Pajak</h2>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Kelola jenis dan persentase tarif pajak (PPN / PPh) yang digunakan pada form Fund Request (FR).
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-gray-100">
             <Link
               href="/admin/tax"
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#1F3A5F] text-white text-xs font-semibold rounded-xl hover:bg-[#142640] transition shadow-xs group-hover:bg-indigo-600"
+              className="w-full inline-flex items-center justify-between px-3.5 py-2.5 bg-[#1F3A5F] text-white text-xs font-semibold rounded-lg hover:bg-[#142640] transition cursor-pointer"
             >
               <span>Kelola Pengaturan Pajak</span>
-              <ArrowRight size={16} />
+              <ArrowRight size={14} />
             </Link>
           </div>
         </div>

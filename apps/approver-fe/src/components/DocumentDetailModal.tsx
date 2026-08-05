@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle, Calculator, FileSpreadsheet, Edit3 } from "lucide-react";
+import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle, Calculator, FileSpreadsheet, Edit3, Paperclip, ExternalLink } from "lucide-react";
 import { getXsrfToken } from "@/lib/csrf";
 import VerfAnggaranModal, { VerfAnggaranData } from "./VerfAnggaranModal";
 
@@ -51,6 +51,7 @@ interface DocDetail {
   number_fr?: string;
   keterangan?: string;
   kategori_fr_name?: string;
+  attachments?: Array<{ id: number; filename: string; url: string }>;
   // FS specific
   number_fs?: string;
   balance?: number;
@@ -332,6 +333,39 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                   </div>
                 </div>
               </div>
+
+              {/* Lampiran & Dokumen Pendukung (FR / FS Attachments) */}
+              {data.attachments && data.attachments.length > 0 && (
+                <div className="bg-white border border-[#E3E6EA] rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-[#F8F9FB] px-4 py-2.5 border-b border-[#E3E6EA] flex items-center justify-between">
+                    <h4 className="text-[13px] font-semibold text-[#374151] flex items-center gap-2">
+                      <Paperclip size={16} className="text-[#1F3A5F]" />
+                      Lampiran & Dokumen Pendukung ({data.attachments.length})
+                    </h4>
+                  </div>
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-white">
+                    {data.attachments.map((att: any) => (
+                      <a
+                        key={att.id}
+                        href={att.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-2.5 border border-gray-200 rounded-lg hover:border-[#1F3A5F] hover:bg-blue-50/20 transition group text-xs cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                          <FileText size={16} className="text-[#1F3A5F] shrink-0" />
+                          <span className="font-semibold text-gray-800 truncate group-hover:text-[#1F3A5F]">
+                            {att.filename}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-semibold text-[#1F3A5F] group-hover:underline flex items-center gap-1 shrink-0 ml-2">
+                          Buka <ExternalLink size={12} />
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Verifikasi Anggaran Card (PPAB Specific) */}
               {docType === 'ppab' && (

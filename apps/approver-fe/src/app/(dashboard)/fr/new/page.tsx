@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Save, Send } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Send, Paperclip, Upload, FileText, File } from "lucide-react";
 import { refreshCsrfCookie } from "@/lib/csrf";
 import SsoUserPicker from "@/components/SsoUserPicker";
+import TaxDropdownPicker from "@/components/TaxDropdownPicker";
 import { approverPayloadFromSelection } from "@/lib/employees";
 
 interface Category {
@@ -81,6 +82,20 @@ export default function NewFrPage() {
   const [kategoriFrId, setKategoriFrId] = useState<number | "">("");
   const [currency, setCurrency] = useState("IDR");
   const [keterangan, setKeterangan] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
+
+  const handleFileSelect = (newFiles: File[]) => {
+    const validFiles = newFiles.filter((f) => {
+      const isUnder10MB = f.size <= 10 * 1024 * 1024;
+      const isValidType = /\.(pdf|png|jpg|jpeg)$/i.test(f.name);
+      return isUnder10MB && isValidType;
+    });
+    setAttachments((prev) => [...prev, ...validFiles]);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const [items, setItems] = useState<ItemLine[]>([
     { id: "1", deskripsi: "", sub_total: 0, selectedTaxIds: [] },
@@ -257,24 +272,45 @@ export default function NewFrPage() {
         };
       });
 
-      const res = await fetch("/api/fr", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-XSRF-TOKEN": xsrfToken,
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          number_fr: numberFr,
-          kategori_fr_id: kategoriFrId,
-          currency,
-          keterangan,
-          status: submitStatus,
-          items: payloadItems,
-          approver_lines: payloadApprovers,
-        }),
-      });
+      let res: Response;
+      const payloadData = {
+        number_fr: numberFr,
+        kategori_fr_id: kategoriFrId,
+        currency,
+        keterangan,
+        status: submitStatus,
+        items: payloadItems,
+        approver_lines: payloadApprovers,
+      };
+
+      if (attachments.length > 0) {
+        const formData = new FormData();
+        formData.append("payload", JSON.stringify(payloadData));
+        attachments.forEach((file) => {
+          formData.append("attachments[]", file);
+        });
+
+        res = await fetch("/api/fr", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "X-XSRF-TOKEN": xsrfToken,
+          },
+          credentials: "include",
+          body: formData,
+        });
+      } else {
+        res = await fetch("/api/fr", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-XSRF-TOKEN": xsrfToken,
+          },
+          credentials: "include",
+          body: JSON.stringify(payloadData),
+        });
+      }
 
       const json = await res.json();
       if (!res.ok) {
@@ -289,10 +325,6 @@ export default function NewFrPage() {
       setSubmitting(false);
     }
   };
-
-  // Pisahkan daftar pajak berdasarkan jenisnya untuk label yang lebih informatif di UI
-  const ppnTaxes = taxes.filter((t) => getTaxType(t.name) === "ppn");
-  const pphTaxes = taxes.filter((t) => getTaxType(t.name) === "pph");
 
   return (
     <div className="max-w-4xl mx-auto py-6 px-4 space-y-6">
@@ -457,68 +489,18 @@ export default function NewFrPage() {
                     </div>
                   </div>
 
-                  {/* Pilihan Pajak — Checkbox independen */}
+                  {/* Pilihan Pajak — Dropdown Multi-select dengan Searchbar */}
                   {taxes.length > 0 && (
-                    <div className="space-y-2">
-                      {/* PPN */}
-                      {ppnTaxes.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 mb-1">PPN</p>
-                          <div className="flex flex-wrap gap-2">
-                            {ppnTaxes.map((t) => {
-                              const isChecked = item.selectedTaxIds.includes(t.id);
-                              return (
-                                <label
-                                  key={t.id}
-                                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border cursor-pointer transition select-none ${
-                                    isChecked
-                                      ? "bg-blue-600 text-white border-blue-600"
-                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="sr-only"
-                                    checked={isChecked}
-                                    onChange={() => toggleTax(item.id, t.id)}
-                                  />
-                                  {t.name} ({Number(t.value)}%)
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* PPh */}
-                      {pphTaxes.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 mb-1">PPh</p>
-                          <div className="flex flex-wrap gap-2">
-                            {pphTaxes.map((t) => {
-                              const isChecked = item.selectedTaxIds.includes(t.id);
-                              return (
-                                <label
-                                  key={t.id}
-                                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border cursor-pointer transition select-none ${
-                                    isChecked
-                                      ? "bg-amber-600 text-white border-amber-600"
-                                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="sr-only"
-                                    checked={isChecked}
-                                    onChange={() => toggleTax(item.id, t.id)}
-                                  />
-                                  {t.name} ({Number(t.value)}%)
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        Pajak (PPN & PPh)
+                      </label>
+                      <TaxDropdownPicker
+                        taxes={taxes}
+                        selectedTaxIds={item.selectedTaxIds}
+                        onChange={(newTaxIds) => updateItem(item.id, "selectedTaxIds", newTaxIds)}
+                        placeholder="Pilih jenis & tarif pajak..."
+                      />
                     </div>
                   )}
 
@@ -608,6 +590,86 @@ export default function NewFrPage() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Section: Lampiran & Dokumen Pendukung (Attachments) */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
+          <div className="border-b pb-2">
+            <h2 className="text-sm font-semibold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+              <Paperclip size={16} className="text-[#1F3A5F]" />
+              Lampiran & Dokumen Pendukung (Attachments)
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Unggah bukti transaksi seperti struk, nota, kwitansi, invoice, atau proposal pendukung (Format: PDF, JPG, JPEG, PNG | Maks 10MB per file).
+            </p>
+          </div>
+
+          {/* Drag and Drop File Upload Area */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (e.dataTransfer.files) {
+                handleFileSelect(Array.from(e.dataTransfer.files));
+              }
+            }}
+            className="border-2 border-dashed border-gray-300 hover:border-[#1F3A5F] rounded-xl p-6 text-center bg-gray-50/60 hover:bg-blue-50/20 transition cursor-pointer relative"
+          >
+            <input
+              type="file"
+              multiple
+              accept=".pdf,.png,.jpg,.jpeg"
+              onChange={(e) => {
+                if (e.target.files) {
+                  handleFileSelect(Array.from(e.target.files));
+                }
+              }}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+            />
+            <div className="flex flex-col items-center justify-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-blue-50 text-[#1F3A5F] flex items-center justify-center">
+                <Upload size={20} />
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-[#1F3A5F]">Klik untuk pilih file lampiran</span>
+                <span className="text-xs text-gray-500"> atau tarik & lepas file di sini</span>
+              </div>
+              <span className="text-[11px] text-gray-400">PDF, JPG, JPEG, PNG (Maks 10MB per file)</span>
+            </div>
+          </div>
+
+          {/* Uploaded Attachment Chips */}
+          {attachments.length > 0 && (
+            <div className="space-y-2 pt-2">
+              <span className="text-xs font-semibold text-gray-700 block">
+                File Terlampir ({attachments.length}):
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {attachments.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <FileText size={16} className="text-[#1F3A5F] shrink-0" />
+                      <div className="truncate">
+                        <p className="font-semibold text-gray-800 truncate">{file.name}</p>
+                        <p className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(idx)}
+                      className="text-gray-400 hover:text-red-600 p-1 transition shrink-0 cursor-pointer"
+                      title="Hapus file"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Approval Roles */}
