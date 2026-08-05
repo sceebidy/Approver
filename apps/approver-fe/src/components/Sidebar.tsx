@@ -93,9 +93,9 @@ export default function Sidebar() {
           <img 
             src="/logo.png" 
             alt="INL Logo" 
-            className={`object-contain transition-all duration-300 ${collapsed ? "w-10 h-10" : "w-12 h-12"}`} 
+            className={`object-contain transition-all duration-300 ${collapsed ? "w-12 h-12" : "w-14 h-14"}`} 
           />
-          {!collapsed && <span className="text-[17px] font-extrabold text-[#111827] tracking-tight truncate">Approver</span>}
+          {!collapsed && <span className="text-[17px] font-extrabold text-[#111827] tracking-tight truncate">IDAS</span>}
         </div>
         
         {/* Desktop Toggle Button */}
@@ -223,9 +223,9 @@ export default function Sidebar() {
           <img 
             src="/logo.png" 
             alt="INL Logo" 
-            className="w-10 h-10 object-contain ml-1" 
+            className="w-12 h-12 object-contain ml-1" 
           />
-          <span className="text-[16px] font-extrabold text-[#111827] tracking-tight">Approver</span>
+          <span className="text-[16px] font-extrabold text-[#111827] tracking-tight">IDAS</span>
         </div>
         <div className="flex items-center gap-2">
           <button 

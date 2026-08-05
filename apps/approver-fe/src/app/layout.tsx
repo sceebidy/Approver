@@ -15,7 +15,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Approver",
+  title: "IDAS",
   description: "Sistem approval procurement & financial",
 };
 

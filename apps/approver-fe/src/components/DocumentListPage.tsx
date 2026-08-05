@@ -47,16 +47,38 @@ const tabs = [
 ];
 
 export default function DocumentListPage({ title, subtitle, docType, createLabel, createHref, createNode, columns, rows, loading, error, onDelete, onRowClick }: Props) {
+  // Compute default 30-day window (today and 30 days ago in YYYY-MM-DD)
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(today.getDate() - 30);
+  const formatDateLocal = (d: Date) => d.toISOString().slice(0, 10);
+  const defaultStart = formatDateLocal(thirtyDaysAgo);
+  const defaultEnd = formatDateLocal(today);
+
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  // Semua / Disetujui / Ditolak default to last 30 days; Menunggu shows all
+  const [startDate, setStartDate] = useState(defaultStart);
+  const [endDate, setEndDate] = useState(defaultEnd);
   const [typeFilter, setTypeFilter] = useState("all");
   const [deletingRow, setDeletingRow] = useState<DocRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const currentDocType = (docType || title).toLowerCase();
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === "pending") {
+      // Menunggu shows ALL — clear date filter
+      setStartDate("");
+      setEndDate("");
+    } else {
+      // Semua / Disetujui / Ditolak — reset to last 30 days
+      setStartDate(defaultStart);
+      setEndDate(defaultEnd);
+    }
+  };
 
   const filtered = rows.filter((r) => {
     if (activeTab !== "all" && r.status !== activeTab) return false;
@@ -82,6 +104,7 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
 
     return true;
   });
+
 
   /** Format nilai sel berdasarkan type kolom */
   function cellValue(row: DocRow, col: DocColumn): string {
@@ -143,7 +166,7 @@ export default function DocumentListPage({ title, subtitle, docType, createLabel
             {tabs.map((t) => (
               <button
                 key={t.key}
-                onClick={() => setActiveTab(t.key)}
+                onClick={() => handleTabChange(t.key)}
                 className={`px-4 py-1.5 rounded-md text-[12.5px] font-medium transition-all duration-200 ${
                   activeTab === t.key 
                     ? "bg-white text-[#1F3A5F] shadow-sm border border-[#E3E6EA]/50" 
