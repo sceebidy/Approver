@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Fr;
 use App\Models\KategoriFr;
 use App\Models\Tax;
+use App\Models\FrAttachment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,7 +14,7 @@ class FrController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $query = Fr::with('requester:id,name', 'kategoriFr:id,nama', 'approvers')->latest();
+        $query = Fr::with('requester:id,name', 'kategoriFr:id,nama', 'approvers', 'attachments')->latest();
 
         $showAll = request()->query('all') == '1' && $user->role === 'super_admin';
         if (!$showAll) {
@@ -53,6 +54,7 @@ class FrController extends Controller
                 'created_at'        => $f->created_at,
                 'can_cancel'        => !$approverLines->contains('status', 'approved'),
                 'request_type'      => $f->requester_id === $user->id ? 'Pengajuan Saya' : ($approverLines->contains('approver_id', $user->id) ? 'Butuh Approval Anda' : 'Lainnya'),
+                'attachment_count'  => $f->attachments->count(),
             ];
         });
 
@@ -65,7 +67,8 @@ class FrController extends Controller
             'requester:id,name',
             'kategoriFr:id,nama',
             'itemLines.itemLineTaxes.tax',
-            'approvers.approver:id,name'
+            'approvers.approver:id,name',
+            'attachments'
         ])->findOrFail($id);
 
         $currentUser = auth()->user();
@@ -117,6 +120,13 @@ class FrController extends Controller
                         ]
                     ];
                 }),
+                'attachments' => $fr->attachments->map(function($att) {
+                    return [
+                        'id' => $att->id,
+                        'filename' => basename($att->filename),
+                        'url' => url('/api/fr/attachment/' . $att->id),
+                    ];
+                }),
                 'current_user_id' => $currentUser->id
             ]
         ]);
@@ -148,6 +158,14 @@ class FrController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->has('payload')) {
+            $rawPayload = $request->input('payload');
+            $payloadData = is_string($rawPayload) ? json_decode($rawPayload, true) : $rawPayload;
+            if (is_array($payloadData)) {
+                $request->merge($payloadData);
+            }
+        }
+
         $data = $request->validate([
             'number_fr' => 'required|string|max:255|unique:fr,number_fr',
             'kategori_fr_id' => 'required|integer|exists:kategori_fr,id',
@@ -177,7 +195,7 @@ class FrController extends Controller
 
         $kategori = KategoriFr::findOrFail($data['kategori_fr_id']);
 
-        $fr = DB::transaction(function () use ($data, $userId, $kategori) {
+        $fr = DB::transaction(function () use ($data, $userId, $kategori, $request) {
             $status = $data['status'] ?? 'submitted';
 
             $fr = Fr::create([
@@ -231,18 +249,48 @@ class FrController extends Controller
                 ]);
             }
 
+            // Process uploaded attachments (struk, nota, pdf, jpg, png)
+            if ($request->hasFile('attachments')) {
+                $files = $request->file('attachments');
+                if (!is_array($files)) {
+                    $files = [$files];
+                }
+                foreach ($files as $file) {
+                    if ($file->isValid()) {
+                        $storedPath = $file->store('fr-attachments', 'local');
+                        $fr->attachments()->create([
+                            'filename' => $storedPath
+                        ]);
+                    }
+                }
+            }
+
             // Sync physical document status to database based on new lines
             $totalLines = count($data['approver_lines']);
             $fr->status = $totalLines > 0 ? 'pending' : 'approved';
             $fr->save();
 
-            return $fr->load('itemLines.itemLineTaxes', 'approvers.approver');
+            return $fr->load('itemLines.itemLineTaxes', 'approvers.approver', 'attachments');
         });
 
         return response()->json([
             'success' => true,
             'data' => $fr,
         ], 201);
+    }
+
+    public function downloadAttachment($id)
+    {
+        $attachment = FrAttachment::findOrFail($id);
+        $path = storage_path('app/' . $attachment->filename);
+
+        if (!file_exists($path)) {
+            return response()->json(['success' => false, 'message' => 'File tidak ditemukan.'], 404);
+        }
+
+        return response()->file($path, [
+            'Content-Disposition' => 'inline; filename="' . basename($attachment->filename) . '"'
+        ]);
     }
 
     private function getOrCreateUser($approverData)

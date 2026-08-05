@@ -26,6 +26,7 @@ use App\Http\Controllers\FsController;
 use App\Http\Controllers\DocumentSigningController;
 use App\Http\Controllers\ApproverKategoriFrController;
 use App\Http\Controllers\TaxController;
+use App\Http\Controllers\KategoriFrAdminController;
 
 // Public Routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -41,6 +42,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/tax', [TaxController::class, 'store']);
     Route::put('/admin/tax/{id}', [TaxController::class, 'update']);
     Route::delete('/admin/tax/{id}', [TaxController::class, 'destroy']);
+    Route::get('/admin/kategori-fr', [KategoriFrAdminController::class, 'index']);
+    Route::post('/admin/kategori-fr', [KategoriFrAdminController::class, 'store']);
+    Route::put('/admin/kategori-fr/{id}', [KategoriFrAdminController::class, 'update']);
+    Route::delete('/admin/kategori-fr/{id}', [KategoriFrAdminController::class, 'destroy']);
     // Portal API proxy routes
     Route::get('/portal/employees', [PortalController::class, 'employees']);
     Route::get('/portal/grades', [PortalController::class, 'grades']);
@@ -79,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/fr', [FrController::class, 'index']);
     Route::get('/fr/categories', [FrController::class, 'categories']);
     Route::get('/fr/approved-list', [FrController::class, 'approvedList']);
+    Route::get('/fr/attachment/{id}', [FrController::class, 'downloadAttachment']);
     Route::post('/fr', [FrController::class, 'store']);
     Route::get('/fr/{id}', [FrController::class, 'show']);
     Route::delete('/fr/{id}', [FrController::class, 'destroy']);
