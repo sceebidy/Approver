@@ -37,4 +37,9 @@ class Mis extends Model
     {
         return $this->hasMany(MisApproverLine::class, 'mis_id');
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(MisAttachment::class, 'mis_id');
+    }
 }

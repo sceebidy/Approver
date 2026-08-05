@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle, Calculator, FileSpreadsheet, Edit3, Paperclip, ExternalLink } from "lucide-react";
+import { X, Loader2, AlertCircle, FileText, User, Calendar, Tag, CheckCircle2, Clock, XCircle, Calculator, FileSpreadsheet, Edit3, Paperclip, ExternalLink, Plus, Trash2 } from "lucide-react";
 import { getXsrfToken } from "@/lib/csrf";
 import VerfAnggaranModal, { VerfAnggaranData } from "./VerfAnggaranModal";
 
@@ -20,6 +20,16 @@ interface ApproverLine {
   };
 }
 
+interface AttachmentItem {
+  id: number;
+  filename: string;
+  original_name?: string;
+  file_size?: number;
+  mime_type?: string;
+  url?: string;
+  created_at?: string;
+}
+
 interface DocDetail {
   id: number;
   request_type: string;
@@ -31,6 +41,8 @@ interface DocDetail {
   created_at: string;
   approverLines?: ApproverLine[];
   approver_lines?: ApproverLine[];
+  attachments_list?: AttachmentItem[];
+  attachments?: AttachmentItem[];
   // PPAB specific
   nomor_ppab?: string;
   deskripsi?: string;
@@ -51,7 +63,6 @@ interface DocDetail {
   number_fr?: string;
   keterangan?: string;
   kategori_fr_name?: string;
-  attachments?: Array<{ id: number; filename: string; url: string }>;
   // FS specific
   number_fs?: string;
   balance?: number;
@@ -75,6 +86,7 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isVerfModalOpen, setIsVerfModalOpen] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     action: 'approve' | 'reject';
@@ -120,9 +132,71 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
       }
       setData(resData.data);
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan jaringan.');
+      setError(err.message || 'Terjadi kesalahan saat mengambil detail dokumen.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !docId) return;
+    const files = Array.from(e.target.files);
+    setUploadingAttachment(true);
+
+    try {
+      const xsrfToken = await getXsrfToken();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('attachments[]', file);
+      });
+
+      const res = await fetch(`${apiUrl}/${docType}/${docId}/attachments`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-XSRF-TOKEN': xsrfToken,
+        },
+        credentials: 'include',
+        body: formData,
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.message || 'Gagal mengunggah lampiran');
+      }
+
+      fetchDetail();
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengunggah lampiran');
+    } finally {
+      setUploadingAttachment(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: number) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus lampiran ini?")) return;
+    try {
+      const xsrfToken = await getXsrfToken();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+      const res = await fetch(`${apiUrl}/${docType}/attachment/${attachmentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'X-XSRF-TOKEN': xsrfToken,
+        },
+        credentials: 'include',
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.message || 'Gagal menghapus lampiran');
+      }
+
+      fetchDetail();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus lampiran');
     }
   };
 
@@ -333,39 +407,6 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                   </div>
                 </div>
               </div>
-
-              {/* Lampiran & Dokumen Pendukung (FR / FS Attachments) */}
-              {data.attachments && data.attachments.length > 0 && (
-                <div className="bg-white border border-[#E3E6EA] rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-[#F8F9FB] px-4 py-2.5 border-b border-[#E3E6EA] flex items-center justify-between">
-                    <h4 className="text-[13px] font-semibold text-[#374151] flex items-center gap-2">
-                      <Paperclip size={16} className="text-[#1F3A5F]" />
-                      Lampiran & Dokumen Pendukung ({data.attachments.length})
-                    </h4>
-                  </div>
-                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-white">
-                    {data.attachments.map((att: any) => (
-                      <a
-                        key={att.id}
-                        href={att.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-2.5 border border-gray-200 rounded-lg hover:border-[#1F3A5F] hover:bg-blue-50/20 transition group text-xs cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5 overflow-hidden">
-                          <FileText size={16} className="text-[#1F3A5F] shrink-0" />
-                          <span className="font-semibold text-gray-800 truncate group-hover:text-[#1F3A5F]">
-                            {att.filename}
-                          </span>
-                        </div>
-                        <span className="text-[11px] font-semibold text-[#1F3A5F] group-hover:underline flex items-center gap-1 shrink-0 ml-2">
-                          Buka <ExternalLink size={12} />
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Verifikasi Anggaran Card (PPAB Specific) */}
               {docType === 'ppab' && (
@@ -674,6 +715,101 @@ export default function DocumentDetailModal({ isOpen, onClose, docId, docType, o
                   </div>
                 )}
               </div>
+
+              {/* Attachment Files Card */}
+              {(() => {
+                const attachmentsList: AttachmentItem[] = data.attachments_list || data.attachments || [];
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
+
+                return (
+                  <div className="bg-white border border-[#E3E6EA] rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-[#F8F9FB] px-4 py-2.5 border-b border-[#E3E6EA] flex items-center justify-between flex-wrap gap-2">
+                      <h4 className="text-[13px] font-semibold text-[#374151] flex items-center gap-2">
+                        <Paperclip size={16} className="text-[#1F3A5F]" />
+                        Lampiran Dokumen Pendukung
+                        {attachmentsList.length > 0 && (
+                          <span className="px-2 py-0.5 text-xs font-bold text-[#1F3A5F] bg-[#1F3A5F]/10 rounded-full">
+                            {attachmentsList.length}
+                          </span>
+                        )}
+                      </h4>
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 text-[12px] font-semibold rounded-md border border-[#E3E6EA] transition-all cursor-pointer shadow-xs select-none">
+                        {uploadingAttachment ? (
+                          <Loader2 size={13} className="animate-spin text-[#1F3A5F]" />
+                        ) : (
+                          <Plus size={13} className="text-[#1F3A5F]" />
+                        )}
+                        {uploadingAttachment ? "Mengunggah..." : "Tambah Lampiran"}
+                        <input
+                          type="file"
+                          multiple
+                          disabled={uploadingAttachment}
+                          className="hidden"
+                          onChange={handleUploadAttachment}
+                        />
+                      </label>
+                    </div>
+
+                    {attachmentsList.length > 0 ? (
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {attachmentsList.map((att: AttachmentItem) => {
+                          const attUrl = att.url || `${apiUrl}/${docType}/attachment/${att.id}`;
+                          const fileName = att.original_name || att.filename || `Attachment #${att.id}`;
+                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
+                          const isPdf = /\.pdf$/i.test(fileName);
+
+                          return (
+                            <div key={att.id} className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-lg transition-colors group">
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div className="p-2 bg-white rounded-md border border-slate-200 text-[#1F3A5F] shrink-0">
+                                  {isPdf ? <FileText size={18} /> : isImage ? <Paperclip size={18} /> : <FileText size={18} />}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-semibold text-slate-800 truncate" title={fileName}>
+                                    {fileName}
+                                  </p>
+                                  {att.file_size && (
+                                    <p className="text-[11px] text-slate-500">
+                                      {(att.file_size / 1024).toFixed(1)} KB
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    window.open(attUrl, '_blank');
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#1F3A5F] bg-white border border-[#E3E6EA] hover:bg-[#1F3A5F] hover:text-white rounded-md transition-all shadow-2xs"
+                                  title="Lihat / Download File Lampiran"
+                                >
+                                  <ExternalLink size={13} />
+                                  Buka File
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAttachment(att.id)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-red-600 bg-white border border-red-200 hover:bg-red-50 hover:border-red-300 hover:text-red-700 rounded-md transition-all shadow-2xs"
+                                  title="Hapus Lampiran Ini"
+                                >
+                                  <Trash2 size={13} />
+                                  Hapus
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-500 bg-slate-50/50">
+                        Belum ada lampiran dokumen pendukung. Klik <strong>"Tambah Lampiran"</strong> di atas untuk mengunggah.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Approvers Timeline */}
               <div className="bg-white border border-[#E3E6EA] rounded-lg shadow-sm">

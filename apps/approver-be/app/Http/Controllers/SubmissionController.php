@@ -18,6 +18,13 @@ class SubmissionController extends Controller
      */
     public function create(Request $request)
     {
+        if (is_string($request->input('data'))) {
+            $request->merge(['data' => json_decode($request->input('data'), true)]);
+        }
+        if (is_string($request->input('approvers'))) {
+            $request->merge(['approvers' => json_decode($request->input('approvers'), true)]);
+        }
+
         $request->validate([
             'type' => 'required|in:ppab,po,mis',
             'data' => 'required|array',
@@ -176,6 +183,40 @@ class SubmissionController extends Controller
                         'role' => $approverData['role'] ?? 'approver',
                         'status' => 'pending'
                     ]);
+                }
+            }
+
+            // Save optional supporting attachments
+            if ($request->hasFile('attachments') && isset($documentId)) {
+                $files = $request->file('attachments');
+                if (!is_array($files)) {
+                    $files = [$files];
+                }
+
+                $docModel = match ($type) {
+                    'ppab' => Ppab::find($documentId),
+                    'po'   => Po::find($documentId),
+                    'mis'  => Mis::find($documentId),
+                    default => null,
+                };
+
+                if ($docModel) {
+                    $folder = "{$type}-attachments";
+                    foreach ($files as $file) {
+                        if ($file->isValid()) {
+                            $originalName = $file->getClientOriginalName();
+                            $fileSize = $file->getSize();
+                            $mimeType = $file->getClientMimeType();
+                            $storedPath = $file->store($folder, 'local');
+
+                            $docModel->attachments()->create([
+                                'filename'      => $storedPath,
+                                'original_name' => $originalName,
+                                'file_size'     => $fileSize,
+                                'mime_type'     => $mimeType,
+                            ]);
+                        }
+                    }
                 }
             }
 

@@ -148,7 +148,7 @@ class PpabController extends Controller
 
     public function show($id)
     {
-        $ppab = Ppab::with(['user:id,name', 'items.lineSpecs', 'subtotals', 'approverLines.approver:id,name', 'verfAnggaran'])->findOrFail($id);
+        $ppab = Ppab::with(['user:id,name', 'items.lineSpecs', 'subtotals', 'approverLines.approver:id,name', 'verfAnggaran', 'attachments'])->findOrFail($id);
         
         $user = auth()->user();
         $userIds = [$user->id];
@@ -171,6 +171,18 @@ class PpabController extends Controller
         $ppab->verifier_name = $verifierLine?->approver?->name ?? null;
         $ppab->current_user_id = $user->id;
         $ppab->current_user_ids = $userIds;
+
+        $ppab->attachments_list = $ppab->attachments->map(function ($att) {
+            return [
+                'id'            => $att->id,
+                'filename'      => basename($att->filename),
+                'original_name' => $att->original_name ?? basename($att->filename),
+                'file_size'     => $att->file_size,
+                'mime_type'     => $att->mime_type,
+                'url'           => url('/api/ppab/attachment/' . $att->id),
+                'created_at'    => $att->created_at,
+            ];
+        });
 
         return response()->json([
             'success' => true,

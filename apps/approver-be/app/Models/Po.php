@@ -39,4 +39,9 @@ class Po extends Model
     {
         return $this->hasMany(PoApproverLine::class, 'po_id');
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(PoAttachment::class, 'po_id');
+    }
 }

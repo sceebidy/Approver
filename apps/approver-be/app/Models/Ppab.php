@@ -42,4 +42,9 @@ class Ppab extends Model
     {
         return $this->hasOne(PpabVerfAnggaran::class, 'ppab_id');
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(PpabAttachment::class, 'ppab_id');
+    }
 }

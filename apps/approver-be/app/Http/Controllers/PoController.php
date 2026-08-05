@@ -139,7 +139,7 @@ class PoController extends Controller
 
     public function show($id)
     {
-        $po = Po::with(['user:id,name', 'itemLines', 'subtotals', 'approverLines.approver:id,name'])->findOrFail($id);
+        $po = Po::with(['user:id,name', 'itemLines', 'subtotals', 'approverLines.approver:id,name', 'attachments'])->findOrFail($id);
         
         $user = auth()->user();
         $isOwner = $po->user_id === $user->id;
@@ -152,6 +152,18 @@ class PoController extends Controller
         $po->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $po->can_cancel = !$po->approverLines->contains('status', 'approved');
         $po->current_user_id = $user->id;
+
+        $po->attachments_list = $po->attachments->map(function ($att) {
+            return [
+                'id'            => $att->id,
+                'filename'      => basename($att->filename),
+                'original_name' => $att->original_name ?? basename($att->filename),
+                'file_size'     => $att->file_size,
+                'mime_type'     => $att->mime_type,
+                'url'           => url('/api/po/attachment/' . $att->id),
+                'created_at'    => $att->created_at,
+            ];
+        });
 
         return response()->json([
             'success' => true,

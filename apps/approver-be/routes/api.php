@@ -101,6 +101,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mis/{id}/signed-pdf',  [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'mis');
     Route::get('/fr/{id}/signed-pdf',   [DocumentSigningController::class, 'downloadSignedPdf'])->defaults('documentType', 'fr');
 
+    // Document Attachments (PPAB, PO, MIS, FR, FS)
+    Route::post('/{docType}/{id}/attachments', [\App\Http\Controllers\AttachmentController::class, 'uploadAttachment'])->where('docType', 'ppab|po|mis|fr|fs');
+    Route::get('/{docType}/attachment/{attachmentId}', [\App\Http\Controllers\AttachmentController::class, 'downloadAttachment'])->where('docType', 'ppab|po|mis|fr|fs');
+    Route::delete('/{docType}/attachment/{attachmentId}', [\App\Http\Controllers\AttachmentController::class, 'deleteAttachment'])->where('docType', 'ppab|po|mis|fr|fs');
+
     // Admin - FR Approver Mapping settings (deactivated - mapping is now manual per submission)
     // Route::get('/admin/approver-kategori-fr', [ApproverKategoriFrController::class, 'index']);
     // Route::put('/admin/approver-kategori-fr/{kategoriId}', [ApproverKategoriFrController::class, 'update']);

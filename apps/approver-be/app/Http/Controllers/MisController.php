@@ -129,7 +129,7 @@ class MisController extends Controller
 
     public function show($id)
     {
-        $mis = Mis::with(['user:id,name', 'itemLines', 'approverLines.approver:id,name'])->findOrFail($id);
+        $mis = Mis::with(['user:id,name', 'itemLines', 'approverLines.approver:id,name', 'attachments'])->findOrFail($id);
         
         $user = auth()->user();
         $isOwner = $mis->user_id === $user->id;
@@ -142,6 +142,18 @@ class MisController extends Controller
         $mis->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $mis->can_cancel = !$mis->approverLines->contains('status', 'approved');
         $mis->current_user_id = $user->id;
+
+        $mis->attachments_list = $mis->attachments->map(function ($att) {
+            return [
+                'id'            => $att->id,
+                'filename'      => basename($att->filename),
+                'original_name' => $att->original_name ?? basename($att->filename),
+                'file_size'     => $att->file_size,
+                'mime_type'     => $att->mime_type,
+                'url'           => url('/api/mis/attachment/' . $att->id),
+                'created_at'    => $att->created_at,
+            ];
+        });
 
         return response()->json([
             'success' => true,

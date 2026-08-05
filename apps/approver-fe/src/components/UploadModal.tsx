@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { X, UploadCloud, Loader2, AlertCircle, FileText, CheckCircle2, FileUp, Plus } from "lucide-react";
+import { X, UploadCloud, Loader2, AlertCircle, FileText, CheckCircle2, FileUp, Plus, Paperclip } from "lucide-react";
 import SsoUserPicker from "@/components/SsoUserPicker";
 import {
   collectApproversFromData,
@@ -202,6 +202,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
   const [showPreview, setShowPreview] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [selectedVerifierKey, setSelectedVerifierKey] = useState<string | null>(null);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const unsupportedFieldKeys = new Set(['required_for', 'time', 'section']);
 
   useEffect(() => {
@@ -236,6 +237,7 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       setSourcePdfPath(null);
       setShowPreview(false);
       setSelectedVerifierKey(null);
+      setAttachmentFiles([]);
     }
   }, [isOpen]);
 
@@ -375,20 +377,42 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
       const xsrfToken = await refreshCsrfCookie();
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '/api';
-      const res = await fetch(`${apiUrl}/submissions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-XSRF-TOKEN': xsrfToken,
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          type,
-          data: payload,
-          approvers,
-        }),
-      });
+      let res: Response;
+
+      if (attachmentFiles.length > 0) {
+        const formData = new FormData();
+        formData.append('type', type);
+        formData.append('data', JSON.stringify(payload));
+        formData.append('approvers', JSON.stringify(approvers));
+        attachmentFiles.forEach((att) => {
+          formData.append('attachments[]', att);
+        });
+
+        res = await fetch(`${apiUrl}/submissions`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'X-XSRF-TOKEN': xsrfToken,
+          },
+          credentials: 'include',
+          body: formData,
+        });
+      } else {
+        res = await fetch(`${apiUrl}/submissions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-XSRF-TOKEN': xsrfToken,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            type,
+            data: payload,
+            approvers,
+          }),
+        });
+      }
 
       const text = await res.text();
       let data: any = {};
@@ -578,6 +602,53 @@ export default function UploadModal({ isOpen, onClose, title = "Upload PDF", doc
                   selectedVerifierKey={selectedVerifierKey}
                   onSelectVerifier={setSelectedVerifierKey}
                 />
+
+                {/* Section Lampiran Pendukung (Opsional) */}
+                <div className="mt-8 pt-6 border-t border-[#E3E6EA]">
+                  <h4 className="text-[14px] font-bold text-slate-800 flex items-center gap-2 mb-2">
+                    <Paperclip size={16} className="text-[#1F3A5F]" />
+                    File Lampiran Pendukung (Opsional)
+                  </h4>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Unggah file pendukung tambahan (misal: nota, kwitansi, rincian spec, PDF, atau gambar).
+                  </p>
+
+                  <div className="space-y-2 mb-3">
+                    {attachmentFiles.map((attFile, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText size={15} className="text-[#1F3A5F] shrink-0" />
+                          <span className="font-semibold text-slate-800 truncate">{attFile.name}</span>
+                          <span className="text-slate-400 shrink-0">({(attFile.size / 1024).toFixed(1)} KB)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAttachmentFiles(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-slate-400 hover:text-red-500 p-1 rounded transition-colors"
+                          title="Hapus file lampiran ini"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <label className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-white border border-[#E3E6EA] text-slate-700 hover:bg-slate-50 hover:border-slate-300 cursor-pointer transition-all shadow-xs select-none">
+                    <Plus size={14} className="text-[#1F3A5F]" />
+                    Tambah File Lampiran
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          const newFiles = Array.from(e.target.files);
+                          setAttachmentFiles(prev => [...prev, ...newFiles]);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           ) : null}
