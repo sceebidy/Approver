@@ -41,7 +41,7 @@ class DocumentSigningService
         // Check if configured URL contains localhost or 127.0.0.1
         if (empty($configuredUrl) || Str::contains($configuredUrl, ['localhost', '127.0.0.1'])) {
             if (!app()->runningInConsole() && request()) {
-                $requestUrl = rtrim(request()->schemeAndHttpHost(), '/');
+                $requestUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
                 if (!empty($requestUrl)) {
                     return $requestUrl;
                 }
@@ -230,6 +230,12 @@ class DocumentSigningService
             }
             if ($document->verfAnggaran) {
                 $verf = $document->verfAnggaran;
+                if (!$document->relationLoaded('approverLines')) {
+                    $document->load('approverLines.approver');
+                }
+                $verifierLine = $document->approverLines->first(fn($l) => (bool) $l->is_verifier);
+                $verifierName = $verifierLine?->approver?->name ?? ($document->user->name ?? 'Verifikator Anggaran');
+
                 $verfAnggaranData = [
                     'no_ppab'             => $verf->no_ppab ?? $document->nomor_ppab ?? '',
                     'sumber_rek'          => $verf->sumber_rek ?? '',
@@ -238,7 +244,7 @@ class DocumentSigningService
                     'realisasi'           => (float)($verf->realisasi ?? 0),
                     'permintaan'          => (float)($verf->permintaan ?? 0),
                     'sisa_anggaran'       => (float)($verf->sisa_anggaran ?? 0),
-                    'verifier_name'       => $document->user->name ?? 'Verifikator Anggaran',
+                    'verifier_name'       => $verifierName,
                     'verifier_signed_at' => $verf->updated_at ? $verf->updated_at->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') : now()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i'),
                     'verify_url'          => $this->getAppUrl() . "/verify/ppab/{$document->id}/verf",
                 ];

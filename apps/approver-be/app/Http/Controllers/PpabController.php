@@ -162,19 +162,12 @@ class PpabController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized access to this document.'], 403);
         }
 
-        $hasVerifierDesignated = $ppab->approverLines->contains('is_verifier', true);
-        if ($hasVerifierDesignated) {
-            $isDesignatedVerifier = $ppab->approverLines->contains(fn($l) => $l->is_verifier && in_array($l->approver_id, $userIds));
-        } else {
-            // Legacy fallback if no verifier was explicitly assigned
-            $isDesignatedVerifier = $isOwner || $isApprover;
-        }
-
-        $verifierLine = $ppab->approverLines->firstWhere('is_verifier', true);
+        $verifierLine = $ppab->approverLines->first(fn($l) => (bool) $l->is_verifier);
+        $isDesignatedVerifier = $verifierLine ? in_array($verifierLine->approver_id, $userIds) : false;
 
         $ppab->request_type = $isOwner ? 'Pengajuan Saya' : ($isApprover ? 'Butuh Approval Anda' : 'Lainnya');
         $ppab->can_cancel = !$ppab->approverLines->contains('status', 'approved');
-        $ppab->can_edit_verf_anggaran = $isDesignatedVerifier || strtolower($user->role ?? '') === 'super_admin';
+        $ppab->can_edit_verf_anggaran = $isDesignatedVerifier;
         $ppab->verifier_name = $verifierLine?->approver?->name ?? null;
         $ppab->current_user_id = $user->id;
         $ppab->current_user_ids = $userIds;
@@ -195,15 +188,10 @@ class PpabController extends Controller
             $userIds = array_unique(array_merge($userIds, User::where('employee_id', $user->employee_id)->pluck('id')->toArray()));
         }
 
-        $hasVerifierDesignated = $ppab->approverLines->contains('is_verifier', true);
-        if ($hasVerifierDesignated) {
-            $isAllowedVerifier = $ppab->approverLines->contains(fn($l) => $l->is_verifier && in_array($l->approver_id, $userIds));
-        } else {
-            // Legacy fallback
-            $isAllowedVerifier = $ppab->user_id === $user->id || $ppab->approverLines->contains(fn($l) => in_array($l->approver_id, $userIds));
-        }
+        $verifierLine = $ppab->approverLines->first(fn($l) => (bool) $l->is_verifier);
+        $isAllowedVerifier = $verifierLine ? in_array($verifierLine->approver_id, $userIds) : false;
 
-        if (!$isAllowedVerifier && strtolower($user->role ?? '') !== 'super_admin') {
+        if (!$isAllowedVerifier) {
             return response()->json([
                 'success' => false,
                 'message' => 'Akses ditolak: Hanya Verifikator Anggaran yang ditunjuk yang dapat mengisi/mengubah Verifikasi Anggaran.'
