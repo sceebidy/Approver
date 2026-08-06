@@ -103,7 +103,7 @@
             margin-bottom: 15px;
         }
         .info-bingkai-table > tbody > tr > td {
-            padding: 6px 10px;
+            padding: 12px 14px;
             border: none !important;
             vertical-align: top;
         }
@@ -113,7 +113,7 @@
         }
         .inner-info-table td {
             border: none !important;
-            padding: 1.5px 0 !important;
+            padding: 2.5px 0 !important;
             font-size: 9.5px;
             color: #000000;
         }

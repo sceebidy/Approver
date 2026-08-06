@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Fr;
 use App\Models\FundSettlement;
+use App\Services\DocumentNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -97,6 +98,17 @@ class FsController extends Controller
                 }),
                 'current_user_id' => $currentUser->id
             ]
+        ]);
+    }
+
+    public function generateNumber()
+    {
+        $user = auth()->user();
+        $number = DocumentNumberService::generateFsNumber($user);
+
+        return response()->json([
+            'success' => true,
+            'number_fs' => $number,
         ]);
     }
 

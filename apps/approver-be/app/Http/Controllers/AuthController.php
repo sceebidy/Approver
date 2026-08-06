@@ -87,6 +87,7 @@ class AuthController extends Controller
                 'role' => $portalUser['role'] ?? null,
                 'grade_level' => $employee['grade']['level'] ?? null,
                 'unit_nama' => $employee['unit']['nama'] ?? null,
+                'unit_kode' => $employee['unit']['kode'] ?? $employee['unit']['code'] ?? $employee['unit_kode'] ?? null,
                 'foto_profil' => $employee['fotoProfil'] ?? null,
                 'penempatan_nama' => $employee['penempatanArea']['nama'] ?? null,
             ];
@@ -111,6 +112,7 @@ class AuthController extends Controller
                         'name' => $user->name,
                         'role' => $user->role,
                         'unit_nama' => $user->unit_nama,
+                        'unit_kode' => $user->unit_kode,
                         'grade_level' => $user->grade_level,
                     ]
                 ]

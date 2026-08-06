@@ -6,6 +6,7 @@ use App\Models\Fr;
 use App\Models\KategoriFr;
 use App\Models\Tax;
 use App\Models\FrAttachment;
+use App\Services\DocumentNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -154,6 +155,17 @@ class FrController extends Controller
             ->get(['id', 'number_fr', 'keterangan', 'request_date_time']);
 
         return response()->json(['success' => true, 'data' => $items]);
+    }
+
+    public function generateNumber()
+    {
+        $user = auth()->user();
+        $number = DocumentNumberService::generateFrNumber($user);
+
+        return response()->json([
+            'success' => true,
+            'number_fr' => $number,
+        ]);
     }
 
     public function store(Request $request)

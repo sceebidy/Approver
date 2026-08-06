@@ -147,6 +147,7 @@ class PortalController extends Controller
             'gradeLevel' => $grade['level'] ?? $emp['gradeLevel'] ?? null,
             'gradeKode' => $grade['kode'] ?? $grade['nama'] ?? $emp['gradeKode'] ?? null,
             'unitNama' => $unit['nama'] ?? $emp['unitNama'] ?? $emp['unit_nama'] ?? null,
+            'unitKode' => $unit['kode'] ?? $unit['code'] ?? $emp['unitKode'] ?? $emp['unit_kode'] ?? null,
             'penempatanNama' => $penempatan['nama'] ?? $emp['penempatanNama'] ?? null,
             'email' => $emp['email'] ?? null,
         ];

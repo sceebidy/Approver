@@ -82,6 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // FR
     Route::get('/fr', [FrController::class, 'index']);
+    Route::get('/fr/generate-number', [FrController::class, 'generateNumber']);
     Route::get('/fr/categories', [FrController::class, 'categories']);
     Route::get('/fr/approved-list', [FrController::class, 'approvedList']);
     Route::get('/fr/attachment/{id}', [FrController::class, 'downloadAttachment']);
@@ -91,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // FS
     Route::get('/fs', [FsController::class, 'index']);
+    Route::get('/fs/generate-number', [FsController::class, 'generateNumber']);
     Route::post('/fs', [FsController::class, 'store']);
     Route::get('/fs/{id}', [FsController::class, 'show']);
 
