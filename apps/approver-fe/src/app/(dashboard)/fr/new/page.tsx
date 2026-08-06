@@ -133,13 +133,9 @@ export default function NewFrPage() {
   };
 
   useEffect(() => {
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    setNumberFr(`FR/${dateStr}/${randomNum}`);
-
     async function fetchMeta() {
       try {
-        const [resCat, resTax] = await Promise.all([
+        const [resCat, resTax, resNum] = await Promise.all([
           fetch("/api/fr/categories", {
             headers: { Accept: "application/json" },
             credentials: "include",
@@ -148,7 +144,18 @@ export default function NewFrPage() {
             headers: { Accept: "application/json" },
             credentials: "include",
           }),
+          fetch("/api/fr/generate-number", {
+            headers: { Accept: "application/json" },
+            credentials: "include",
+          }),
         ]);
+
+        if (resNum.ok) {
+          const jsonNum = await resNum.json();
+          if (jsonNum.success && jsonNum.number_fr) {
+            setNumberFr(jsonNum.number_fr);
+          }
+        }
 
         if (resCat.ok) {
           const json = await resCat.json();

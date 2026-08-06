@@ -76,14 +76,9 @@ export default function NewFsPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    // Generate default FS number
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    setNumberFs(`FS/${dateStr}/${randomNum}`);
-
     async function fetchMetadata() {
       try {
-        const [frRes, empRes] = await Promise.all([
+        const [frRes, empRes, numRes] = await Promise.all([
           fetch("/api/fr/approved-list", {
             headers: { Accept: "application/json" },
             credentials: "include",
@@ -92,7 +87,18 @@ export default function NewFsPage() {
             headers: { Accept: "application/json" },
             credentials: "include",
           }),
+          fetch("/api/fs/generate-number", {
+            headers: { Accept: "application/json" },
+            credentials: "include",
+          }),
         ]);
+
+        if (numRes.ok) {
+          const jsonNum = await numRes.json();
+          if (jsonNum.success && jsonNum.number_fs) {
+            setNumberFs(jsonNum.number_fs);
+          }
+        }
 
         if (frRes.ok) {
           const jsonFr = await frRes.json();
